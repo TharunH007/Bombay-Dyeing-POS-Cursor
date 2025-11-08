@@ -1,5 +1,5 @@
 let allItems = [];
-let billItems = [];
+let quotationItems = [];
 
 // Load items on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,7 +34,7 @@ function displayItems(items) {
     items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'item-card';
-        card.onclick = () => addItemToBill(item);
+        card.onclick = () => addItemToQuotation(item);
         card.innerHTML = `
             <h4>${item.name}</h4>
             <p>Price: ₹${parseFloat(item.price).toFixed(2)} (Incl. GST ${item.gst}%)</p>
@@ -43,8 +43,8 @@ function displayItems(items) {
     });
 }
 
-// Search items for billing
-function searchItemsForBilling() {
+// Search items for quotation
+function searchItemsForQuotation() {
     const searchTerm = document.getElementById('itemSearchInput').value.trim().toLowerCase();
     const filtered = allItems.filter(item => 
         item.name.toLowerCase().includes(searchTerm)
@@ -52,15 +52,15 @@ function searchItemsForBilling() {
     displayItems(filtered);
 }
 
-// Add item to bill
-function addItemToBill(item) {
-    // Check if item already exists in bill
-    const existingItem = billItems.find(bi => bi.id === item.id);
+// Add item to quotation
+function addItemToQuotation(item) {
+    // Check if item already exists in quotation
+    const existingItem = quotationItems.find(qi => qi.id === item.id);
     
     if (existingItem) {
         existingItem.quantity += 1;
     } else {
-        billItems.push({
+        quotationItems.push({
             id: item.id,
             name: item.name,
             price: parseFloat(item.price),
@@ -69,35 +69,33 @@ function addItemToBill(item) {
         });
     }
     
-    updateBillTable();
+    updateQuotationTable();
     calculateTotal();
 }
 
-// Remove item from bill
-function removeItemFromBill(index) {
-    billItems.splice(index, 1);
-    updateBillTable();
+// Remove item from quotation
+function removeItemFromQuotation(index) {
+    quotationItems.splice(index, 1);
+    updateQuotationTable();
     calculateTotal();
 }
 
 // Calculate base price from inclusive price
-// GST is calculated as percentage of inclusive price
-// Example: ₹1000 with 20% GST = ₹200 GST, ₹800 base
 function calculateBasePrice(inclusivePrice, gstRate) {
     return inclusivePrice * (100 - gstRate) / 100;
 }
 
-// Update bill table
-function updateBillTable() {
-    const tbody = document.getElementById('billTableBody');
+// Update quotation table
+function updateQuotationTable() {
+    const tbody = document.getElementById('quotationTableBody');
     tbody.innerHTML = '';
 
-    if (billItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No items in bill</td></tr>';
+    if (quotationItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No items in quotation</td></tr>';
         return;
     }
 
-    billItems.forEach((item, index) => {
+    quotationItems.forEach((item, index) => {
         // Price is inclusive of GST, so calculate base price and GST amount
         const inclusiveTotal = item.price * item.quantity;
         const basePrice = calculateBasePrice(item.price, item.gst);
@@ -109,16 +107,16 @@ function updateBillTable() {
             <td>${item.name}</td>
             <td>
                 <div class="quantity-controls">
-                    <button class="quantity-btn" onclick="decreaseQuantity(${index})">-</button>
+                    <button class="quantity-btn" onclick="decreaseQuotationQuantity(${index})">-</button>
                     <span class="quantity-display">${item.quantity}</span>
-                    <button class="quantity-btn" onclick="increaseQuantity(${index})">+</button>
+                    <button class="quantity-btn" onclick="increaseQuotationQuantity(${index})">+</button>
                 </div>
             </td>
             <td>₹${baseTotal.toFixed(2)}</td>
             <td>₹${gstAmount.toFixed(2)}</td>
             <td>₹${inclusiveTotal.toFixed(2)}</td>
             <td>
-                <button class="btn btn-danger" onclick="removeItemFromBill(${index})">Remove</button>
+                <button class="btn btn-danger" onclick="removeItemFromQuotation(${index})">Remove</button>
             </td>
         `;
         tbody.appendChild(row);
@@ -126,17 +124,17 @@ function updateBillTable() {
 }
 
 // Increase quantity
-function increaseQuantity(index) {
-    billItems[index].quantity += 1;
-    updateBillTable();
+function increaseQuotationQuantity(index) {
+    quotationItems[index].quantity += 1;
+    updateQuotationTable();
     calculateTotal();
 }
 
 // Decrease quantity
-function decreaseQuantity(index) {
-    if (billItems[index].quantity > 1) {
-        billItems[index].quantity -= 1;
-        updateBillTable();
+function decreaseQuotationQuantity(index) {
+    if (quotationItems[index].quantity > 1) {
+        quotationItems[index].quantity -= 1;
+        updateQuotationTable();
         calculateTotal();
     }
 }
@@ -147,7 +145,7 @@ function calculateTotal() {
     let totalGST = 0;
     let totalInclusive = 0;
 
-    billItems.forEach(item => {
+    quotationItems.forEach(item => {
         // Price is inclusive of GST
         const inclusiveTotal = item.price * item.quantity;
         const basePrice = calculateBasePrice(item.price, item.gst);
@@ -170,10 +168,10 @@ function calculateTotal() {
     document.getElementById('total').textContent = `₹${Math.max(0, total).toFixed(2)}`;
 }
 
-// Submit bill
-function submitBill() {
-    if (billItems.length === 0) {
-        alert('Please add at least one item to the bill.');
+// Create quotation
+function createQuotation() {
+    if (quotationItems.length === 0) {
+        alert('Please add at least one item to the quotation.');
         return;
     }
 
@@ -199,7 +197,7 @@ function submitBill() {
     let totalGST = 0;
     let totalInclusive = 0;
 
-    billItems.forEach(item => {
+    quotationItems.forEach(item => {
         const inclusiveTotal = item.price * item.quantity;
         const basePrice = calculateBasePrice(item.price, item.gst);
         const baseTotal = basePrice * item.quantity;
@@ -214,11 +212,11 @@ function submitBill() {
     const sgst = totalGST / 2;
     const total = Math.max(0, totalInclusive - discount);
 
-    // Prepare invoice data
-    const invoiceData = {
+    // Prepare quotation data
+    const quotationData = {
         customer_name: customerName,
         customer_mobile: customerMobile,
-        items: billItems,
+        items: quotationItems,
         subtotal: subtotal,
         cgst: cgst,
         sgst: sgst,
@@ -226,31 +224,29 @@ function submitBill() {
         total: total
     };
 
-    // Save invoice to database
-    fetch('/api/invoices', {
+    // Save quotation to database
+    fetch('/api/quotations', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(invoiceData)
+        body: JSON.stringify(quotationData)
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
             alert('Error: ' + data.error);
         } else {
-            // Generate PDF
-            generatePDF(invoiceData, data.id);
-            // Show WhatsApp option
-            showWhatsAppOption(invoiceData, data.id, customerMobile);
             // Reset form
-            resetBill();
-            alert('Bill submitted successfully! PDF is being generated.');
+            resetQuotation();
+            alert('Quotation created successfully!');
+            // Optionally redirect to quotations list
+            window.location.href = '/quotations-list';
         }
     })
     .catch(error => {
-        console.error('Error submitting bill:', error);
-        alert('Error submitting bill. Please try again.');
+        console.error('Error creating quotation:', error);
+        alert('Error creating quotation. Please try again.');
     });
 }
 
@@ -344,62 +340,12 @@ function generatePDF(invoiceData, invoiceId) {
     doc.save(fileName);
 }
 
-// Show WhatsApp option
-function showWhatsAppOption(invoiceData, invoiceId, mobile) {
-    const message = formatInvoiceMessage(invoiceData, invoiceId);
-    const whatsappLink = `https://wa.me/${mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-    
-    if (confirm('Bill created successfully! Would you like to send it via WhatsApp?')) {
-        window.open(whatsappLink, '_blank');
-    }
-}
-
-// Format invoice message for WhatsApp
-function formatInvoiceMessage(invoiceData, invoiceId) {
-    let message = `*Bombay Dyeing*\n`;
-    message += `Bedding & Linen Shop\n\n`;
-    message += `*Invoice #${invoiceId}*\n`;
-    message += `Date: ${new Date().toLocaleDateString('en-IN')}\n\n`;
-    
-    if (invoiceData.customer_name) {
-        message += `Customer: ${invoiceData.customer_name}\n`;
-    }
-    if (invoiceData.customer_mobile) {
-        message += `Mobile: ${invoiceData.customer_mobile}\n`;
-    }
-    message += `\n*Items:*\n`;
-    
-    invoiceData.items.forEach((item, index) => {
-        const inclusiveTotal = item.price * item.quantity;
-        const basePrice = calculateBasePrice(item.price, item.gst);
-        const baseTotal = basePrice * item.quantity;
-        const gstAmount = inclusiveTotal - baseTotal;
-        
-        message += `${index + 1}. ${item.name}\n`;
-        message += `   Qty: ${item.quantity} | Price: ₹${baseTotal.toFixed(2)} | GST: ₹${gstAmount.toFixed(2)} | Total: ₹${inclusiveTotal.toFixed(2)}\n`;
-    });
-    
-    message += `\n*Summary:*\n`;
-    message += `Subtotal: ₹${invoiceData.subtotal.toFixed(2)}\n`;
-    message += `CGST: ₹${invoiceData.cgst.toFixed(2)}\n`;
-    message += `SGST: ₹${invoiceData.sgst.toFixed(2)}\n`;
-    
-    if (invoiceData.discount > 0) {
-        message += `Discount: -₹${invoiceData.discount.toFixed(2)}\n`;
-    }
-    
-    message += `*Total: ₹${invoiceData.total.toFixed(2)}*\n\n`;
-    message += `Thank you for your business!`;
-    
-    return message;
-}
-
-// Reset bill
-function resetBill() {
-    billItems = [];
+// Reset quotation
+function resetQuotation() {
+    quotationItems = [];
     document.getElementById('customerForm').reset();
     document.getElementById('discount').value = 0;
-    updateBillTable();
+    updateQuotationTable();
     calculateTotal();
 }
 
