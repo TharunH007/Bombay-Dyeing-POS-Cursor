@@ -157,6 +157,7 @@ function showQuotationModal(quotation) {
                     </div>
                 </div>
                 <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn btn-primary" onclick="downloadQuotationPDF(${quotation.id})" style="margin-right: 10px;">Download PDF</button>
                     <button class="btn btn-success" onclick="convertToInvoice(${quotation.id})">Convert to Invoice</button>
                     <button class="btn btn-danger" onclick="closeQuotationModal()" style="margin-left: 10px;">Close</button>
                 </div>
@@ -240,6 +241,118 @@ function deleteQuotation(id) {
         console.error('Error deleting quotation:', error);
         alert('Error deleting quotation. Please try again.');
     });
+}
+
+// Download quotation PDF
+function downloadQuotationPDF(id) {
+    fetch(`/api/quotations/${id}`)
+        .then(response => response.json())
+        .then(quotation => {
+            generateQuotationPDF(quotation, quotation.id);
+        })
+        .catch(error => {
+            console.error('Error loading quotation for PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        });
+}
+
+// Generate Quotation PDF
+function generateQuotationPDF(quotationData, quotationId) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Company Header
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.text('Bombay Dyeing', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text('Bedding & Linen Shop', 105, 28, { align: 'center' });
+
+    // Quotation Details
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('QUOTATION', 105, 40, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Quotation #: ${quotationId}`, 20, 50);
+    doc.text(`Date: ${new Date(quotationData.created_at).toLocaleDateString('en-IN')}`, 20, 56);
+    
+    if (quotationData.customer_name) {
+        doc.text(`Customer: ${quotationData.customer_name}`, 20, 62);
+    }
+    if (quotationData.customer_mobile) {
+        doc.text(`Mobile: ${quotationData.customer_mobile}`, 20, 68);
+    }
+    if (quotationData.customer_gst) {
+        doc.text(`GST No: ${quotationData.customer_gst}`, 20, 74);
+    }
+
+    // Items Table
+    let yPos = quotationData.customer_gst ? 86 : 80;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text('Item', 20, yPos);
+    doc.text('Qty', 80, yPos);
+    doc.text('Price', 100, yPos);
+    doc.text('GST', 130, yPos);
+    doc.text('Total', 160, yPos);
+
+    yPos += 5;
+    doc.setDrawColor(0, 0, 0);
+    doc.line(20, yPos, 190, yPos);
+
+    yPos += 8;
+    doc.setFont(undefined, 'normal');
+
+    quotationData.items.forEach(item => {
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
+        const baseTotal = basePrice * item.quantity;
+        const gstAmount = inclusiveTotal - baseTotal;
+
+        doc.text(item.name.substring(0, 25), 20, yPos);
+        doc.text(item.quantity.toString(), 80, yPos);
+        doc.text(`₹${baseTotal.toFixed(2)}`, 100, yPos);
+        doc.text(`₹${gstAmount.toFixed(2)}`, 130, yPos);
+        doc.text(`₹${inclusiveTotal.toFixed(2)}`, 160, yPos);
+        yPos += 7;
+    });
+
+    // Summary
+    yPos += 5;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 8;
+
+    doc.text(`Subtotal: ₹${quotationData.subtotal.toFixed(2)}`, 130, yPos);
+    yPos += 7;
+    doc.text(`CGST: ₹${quotationData.cgst.toFixed(2)}`, 130, yPos);
+    yPos += 7;
+    doc.text(`SGST: ₹${quotationData.sgst.toFixed(2)}`, 130, yPos);
+    yPos += 7;
+    
+    if (quotationData.discount > 0) {
+        doc.text(`Discount: -₹${quotationData.discount.toFixed(2)}`, 130, yPos);
+        yPos += 7;
+    }
+
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(12);
+    doc.text(`Total: ₹${quotationData.total.toFixed(2)}`, 130, yPos);
+
+    // Footer
+    yPos = 280;
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    doc.text('This is a quotation and not a tax invoice.', 105, yPos, { align: 'center' });
+    yPos += 4;
+    doc.text('Thank you for your business!', 105, yPos, { align: 'center' });
+
+    // Save PDF
+    const fileName = `Bombay_Dyeing_Quotation_${quotationId}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
 }
 
 // Close modal when clicking outside

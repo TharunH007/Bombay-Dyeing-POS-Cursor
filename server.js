@@ -3,6 +3,8 @@ const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+const cron = require('node-cron');
+const backup = require('./backup');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -80,6 +82,42 @@ function initializeDatabase() {
   )`, (err) => {
     if (err) {
       console.error('Error creating quotations table:', err.message);
+    }
+  });
+
+  // Add customer_gst column to invoices if it doesn't exist
+  db.all("PRAGMA table_info(invoices)", [], (err, columns) => {
+    if (err) {
+      console.error('Error checking invoices table:', err.message);
+      return;
+    }
+    const hasGstColumn = columns.some(col => col.name === 'customer_gst');
+    if (!hasGstColumn) {
+      db.run('ALTER TABLE invoices ADD COLUMN customer_gst TEXT DEFAULT NULL', (err) => {
+        if (err) {
+          console.error('Error adding customer_gst to invoices:', err.message);
+        } else {
+          console.log('Added customer_gst column to invoices table');
+        }
+      });
+    }
+  });
+
+  // Add customer_gst column to quotations if it doesn't exist
+  db.all("PRAGMA table_info(quotations)", [], (err, columns) => {
+    if (err) {
+      console.error('Error checking quotations table:', err.message);
+      return;
+    }
+    const hasGstColumn = columns.some(col => col.name === 'customer_gst');
+    if (!hasGstColumn) {
+      db.run('ALTER TABLE quotations ADD COLUMN customer_gst TEXT DEFAULT NULL', (err) => {
+        if (err) {
+          console.error('Error adding customer_gst to quotations:', err.message);
+        } else {
+          console.log('Added customer_gst column to quotations table');
+        }
+      });
     }
   });
 }
@@ -176,7 +214,7 @@ app.delete('/api/items/:id', (req, res) => {
 
 // Create invoice
 app.post('/api/invoices', (req, res) => {
-  const { customer_name, customer_mobile, items, subtotal, cgst, sgst, discount, total } = req.body;
+  const { customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total } = req.body;
 
   if (!customer_name || !customer_mobile) {
     res.status(400).json({ error: 'Customer name and mobile number are required' });
@@ -191,8 +229,8 @@ app.post('/api/invoices', (req, res) => {
   const itemsJson = JSON.stringify(items);
 
   db.run(
-    'INSERT INTO invoices (customer_name, customer_mobile, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [customer_name || '', customer_mobile || '', itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
+    'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [customer_name || '', customer_mobile || '', customer_gst || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -273,7 +311,7 @@ app.get('/api/quotations/:id', (req, res) => {
 
 // Create quotation
 app.post('/api/quotations', (req, res) => {
-  const { customer_name, customer_mobile, items, subtotal, cgst, sgst, discount, total } = req.body;
+  const { customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total } = req.body;
 
   if (!customer_name || !customer_mobile) {
     res.status(400).json({ error: 'Customer name and mobile number are required' });
@@ -288,8 +326,8 @@ app.post('/api/quotations', (req, res) => {
   const itemsJson = JSON.stringify(items);
 
   db.run(
-    'INSERT INTO quotations (customer_name, customer_mobile, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [customer_name, customer_mobile, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
+    'INSERT INTO quotations (customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [customer_name, customer_mobile, customer_gst || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -318,8 +356,8 @@ app.post('/api/quotations/:id/convert', (req, res) => {
 
     // Create invoice from quotation
     db.run(
-      'INSERT INTO invoices (customer_name, customer_mobile, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [quotation.customer_name, quotation.customer_mobile, quotation.items, quotation.subtotal, quotation.cgst, quotation.sgst, quotation.discount, quotation.total],
+      'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [quotation.customer_name, quotation.customer_mobile, quotation.customer_gst, quotation.items, quotation.subtotal, quotation.cgst, quotation.sgst, quotation.discount, quotation.total],
       function(err) {
         if (err) {
           res.status(500).json({ error: err.message });
@@ -381,18 +419,20 @@ app.get('/api/dashboard/monthly-total', (req, res) => {
   );
 });
 
-// Get monthly sales (last 12 months)
+// Get monthly sales (last N months)
 app.get('/api/dashboard/monthly-sales', (req, res) => {
+  const months = parseInt(req.query.months) || 12;
+  
   db.all(
     `SELECT 
       strftime('%Y-%m', created_at) as month,
       strftime('%b %Y', created_at) as monthLabel,
       COALESCE(SUM(total), 0) as total
      FROM invoices
-     WHERE created_at >= datetime('now', '-12 months')
+     WHERE created_at >= datetime('now', '-' || ? || ' months')
      GROUP BY strftime('%Y-%m', created_at)
      ORDER BY month ASC`,
-    [],
+    [months],
     (err, rows) => {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -407,16 +447,19 @@ app.get('/api/dashboard/monthly-sales', (req, res) => {
   );
 });
 
-// Get yearly sales
+// Get yearly sales (last N years)
 app.get('/api/dashboard/yearly-sales', (req, res) => {
+  const years = parseInt(req.query.years) || 5;
+  
   db.all(
     `SELECT 
       strftime('%Y', created_at) as year,
       COALESCE(SUM(total), 0) as total
      FROM invoices
+     WHERE created_at >= datetime('now', '-' || ? || ' years')
      GROUP BY strftime('%Y', created_at)
      ORDER BY year ASC`,
-    [],
+    [years],
     (err, rows) => {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -476,8 +519,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/demo', (req, res) => {
+app.get('/welcome', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'demo.html'));
+});
+
+// Legacy route redirect
+app.get('/demo', (req, res) => {
+  res.redirect('/welcome');
 });
 
 app.get('/billing', (req, res) => {
@@ -500,9 +548,89 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+// Backup API Routes
+app.post('/api/backup/manual', async (req, res) => {
+  try {
+    if (!backup.isFirebaseConfigured()) {
+      return res.status(503).json({ 
+        error: 'Firebase not configured', 
+        message: 'Please add FIREBASE_SERVICE_ACCOUNT to Replit Secrets' 
+      });
+    }
+    
+    const result = await backup.backupToFirebase();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/backup/restore', async (req, res) => {
+  try {
+    if (!backup.isFirebaseConfigured()) {
+      return res.status(503).json({ 
+        error: 'Firebase not configured', 
+        message: 'Please add FIREBASE_SERVICE_ACCOUNT to Replit Secrets' 
+      });
+    }
+    
+    const { backupId } = req.body;
+    const result = await backup.restoreFromFirebase(backupId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/backup/list', async (req, res) => {
+  try {
+    if (!backup.isFirebaseConfigured()) {
+      return res.status(503).json({ 
+        error: 'Firebase not configured', 
+        message: 'Please add FIREBASE_SERVICE_ACCOUNT to Replit Secrets' 
+      });
+    }
+    
+    const backups = await backup.listBackups();
+    res.json(backups);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/backup/status', (req, res) => {
+  res.json({ 
+    configured: backup.isFirebaseConfigured(),
+    message: backup.isFirebaseConfigured() 
+      ? 'Firebase backup is configured and ready' 
+      : 'Firebase not configured. Add FIREBASE_SERVICE_ACCOUNT to Replit Secrets'
+  });
+});
+
+// Automatic hourly backup scheduler
+cron.schedule('0 * * * *', async () => {
+  console.log('Running automatic hourly backup...');
+  try {
+    if (backup.isFirebaseConfigured()) {
+      await backup.backupToFirebase();
+      console.log('Automatic backup completed successfully');
+    } else {
+      console.log('Automatic backup skipped: Firebase not configured');
+    }
+  } catch (error) {
+    console.error('Automatic backup failed:', error.message);
+  }
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log('Automatic hourly backups enabled');
+  if (backup.isFirebaseConfigured()) {
+    console.log('Firebase backup configured and ready');
+  } else {
+    console.log('Firebase not configured - add FIREBASE_SERVICE_ACCOUNT to enable backups');
+  }
 });
 
 // Graceful shutdown
