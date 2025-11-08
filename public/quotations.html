@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bombay Dyeing - Billing</title>
+    <title>Bombay Dyeing - Create Quotations</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -16,8 +16,8 @@
                 <a href="/demo" class="nav-link">Demo</a>
                 <a href="/dashboard" class="nav-link">Dashboard</a>
                 <a href="/" class="nav-link">Items</a>
-                <a href="/billing" class="nav-link active">Billing</a>
-                <a href="/quotations" class="nav-link">Create Quotations</a>
+                <a href="/billing" class="nav-link">Billing</a>
+                <a href="/quotations" class="nav-link active">Create Quotations</a>
                 <a href="/quotations-list" class="nav-link">Quotations List</a>
                 <a href="/invoices" class="nav-link">Invoices</a>
             </nav>
@@ -39,16 +39,16 @@
             </div>
 
             <div class="section">
-                <h2>Items & Bill</h2>
+                <h2>Items & Quotation</h2>
                 <div class="search-bar" style="margin-bottom: 20px;">
-                    <input type="text" id="itemSearchInput" placeholder="Search items..." onkeyup="searchItemsForBilling()">
+                    <input type="text" id="itemSearchInput" placeholder="Search items..." onkeyup="searchItemsForQuotation()">
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div class="items-list" id="itemsList" style="max-height: 400px;">
                         <!-- Items will be loaded here -->
                     </div>
                     <div class="table-container">
-                        <table id="billTable">
+                        <table id="quotationTable">
                             <thead>
                                 <tr>
                                     <th>Item</th>
@@ -59,8 +59,8 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="billTableBody">
-                                <!-- Bill items will be added here -->
+                            <tbody id="quotationTableBody">
+                                <!-- Quotation items will be added here -->
                             </tbody>
                         </table>
                     </div>
@@ -86,13 +86,13 @@
                         <span>Total:</span>
                         <span id="total">₹0.00</span>
                     </div>
-                    <button type="button" class="btn btn-success btn-large" onclick="submitBill()">Submit Bill</button>
+                    <button type="button" class="btn btn-primary btn-large" onclick="createQuotation()">Create Quotation</button>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="billing.js"></script>
+    <script src="quotations.js"></script>
 </body>
 </html>
 

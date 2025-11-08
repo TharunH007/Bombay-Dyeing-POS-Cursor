@@ -43,7 +43,8 @@ function displayInvoices(invoices) {
             <td>₹${parseFloat(invoice.total).toFixed(2)}</td>
             <td>
                 <button class="btn btn-primary" style="margin-right: 5px;" onclick="viewInvoice(${invoice.id})">View</button>
-                <button class="btn btn-success" onclick="downloadPDF(${invoice.id})">Download PDF</button>
+                <button class="btn btn-success" style="margin-right: 5px;" onclick="downloadPDF(${invoice.id})">Download PDF</button>
+                <button class="btn" style="background: #25D366; color: white; margin-right: 5px;" onclick="sendViaWhatsApp(${invoice.id})">WhatsApp</button>
             </td>
         `;
         tbody.appendChild(row);
@@ -287,6 +288,68 @@ function generatePDF(invoiceData, invoiceId) {
     // Save PDF
     const fileName = `Bombay_Dyeing_Invoice_${invoiceId}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
+}
+
+// Send invoice via WhatsApp
+function sendViaWhatsApp(invoiceId) {
+    fetch(`/api/invoices/${invoiceId}`)
+        .then(response => response.json())
+        .then(invoice => {
+            const message = formatInvoiceMessage(invoice, invoice.id);
+            const mobile = invoice.customer_mobile.replace(/[^0-9]/g, '');
+            
+            if (!mobile) {
+                alert('Mobile number not available for this invoice.');
+                return;
+            }
+            
+            const whatsappLink = `https://wa.me/${mobile}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappLink, '_blank');
+        })
+        .catch(error => {
+            console.error('Error loading invoice:', error);
+            alert('Error loading invoice. Please try again.');
+        });
+}
+
+// Format invoice message for WhatsApp
+function formatInvoiceMessage(invoiceData, invoiceId) {
+    let message = `*Bombay Dyeing*\n`;
+    message += `Bedding & Linen Shop\n\n`;
+    message += `*Invoice #${invoiceId}*\n`;
+    message += `Date: ${new Date(invoiceData.created_at).toLocaleDateString('en-IN')}\n\n`;
+    
+    if (invoiceData.customer_name) {
+        message += `Customer: ${invoiceData.customer_name}\n`;
+    }
+    if (invoiceData.customer_mobile) {
+        message += `Mobile: ${invoiceData.customer_mobile}\n`;
+    }
+    message += `\n*Items:*\n`;
+    
+    invoiceData.items.forEach((item, index) => {
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
+        const baseTotal = basePrice * item.quantity;
+        const gstAmount = inclusiveTotal - baseTotal;
+        
+        message += `${index + 1}. ${item.name}\n`;
+        message += `   Qty: ${item.quantity} | Price: ₹${baseTotal.toFixed(2)} | GST: ₹${gstAmount.toFixed(2)} | Total: ₹${inclusiveTotal.toFixed(2)}\n`;
+    });
+    
+    message += `\n*Summary:*\n`;
+    message += `Subtotal: ₹${invoiceData.subtotal.toFixed(2)}\n`;
+    message += `CGST: ₹${invoiceData.cgst.toFixed(2)}\n`;
+    message += `SGST: ₹${invoiceData.sgst.toFixed(2)}\n`;
+    
+    if (invoiceData.discount > 0) {
+        message += `Discount: -₹${invoiceData.discount.toFixed(2)}\n`;
+    }
+    
+    message += `*Total: ₹${invoiceData.total.toFixed(2)}*\n\n`;
+    message += `Thank you for your business!`;
+    
+    return message;
 }
 
 // Close modal when clicking outside

@@ -1,0 +1,153 @@
+const sqlite3 = require('sqlite3').verbose();
+
+const db = new sqlite3.Database('./pos.db', (err) => {
+  if (err) {
+    console.error('Error opening database:', err.message);
+    process.exit(1);
+  } else {
+    console.log('Connected to SQLite database');
+    populateDemoData();
+  }
+});
+
+function populateDemoData() {
+  // Clear existing data
+  db.run('DELETE FROM items', (err) => {
+    if (err) {
+      console.error('Error clearing items:', err.message);
+    } else {
+      console.log('Cleared existing items');
+    }
+  });
+
+  db.run('DELETE FROM invoices', (err) => {
+    if (err) {
+      console.error('Error clearing invoices:', err.message);
+    } else {
+      console.log('Cleared existing invoices');
+    }
+  });
+
+  // Sample items for bedding and linen shop
+  const sampleItems = [
+    { name: 'Cotton Bedsheet Set (King Size)', gst: 18, price: 2500 },
+    { name: 'Premium Duvet Cover (Queen)', gst: 18, price: 1800 },
+    { name: 'Silk Pillow Covers (Pair)', gst: 12, price: 1200 },
+    { name: 'Cotton Blanket (Double)', gst: 18, price: 3200 },
+    { name: 'Bath Towel Set (4 Pieces)', gst: 12, price: 1500 },
+    { name: 'Cotton Curtains (Pair)', gst: 18, price: 2800 },
+    { name: 'Mattress Protector (King)', gst: 12, price: 950 },
+    { name: 'Bed Runner (Queen)', gst: 12, price: 850 },
+    { name: 'Table Linen Set (6 Pieces)', gst: 12, price: 2200 },
+    { name: 'Cotton Quilt Cover (King)', gst: 18, price: 2100 },
+    { name: 'Bath Mat Set (3 Pieces)', gst: 12, price: 750 },
+    { name: 'Premium Bedspread (King)', gst: 18, price: 4500 }
+  ];
+
+  // Insert sample items
+  const insertItem = db.prepare('INSERT INTO items (name, gst, price) VALUES (?, ?, ?)');
+  
+  sampleItems.forEach((item, index) => {
+    insertItem.run([item.name, item.gst, item.price], function(err) {
+      if (err) {
+        console.error(`Error inserting item ${item.name}:`, err.message);
+      } else {
+        console.log(`✓ Added: ${item.name}`);
+      }
+      
+      // After all items are inserted, create sample invoices
+      if (index === sampleItems.length - 1) {
+        insertItem.finalize();
+        setTimeout(() => createSampleInvoices(), 500);
+      }
+    });
+  });
+}
+
+function createSampleInvoices() {
+  // Get all items first
+  db.all('SELECT * FROM items ORDER BY id ASC', (err, items) => {
+    if (err) {
+      console.error('Error fetching items:', err.message);
+      db.close();
+      return;
+    }
+
+    // Sample invoices
+    const sampleInvoices = [
+      {
+        customer_name: 'Rajesh Kumar',
+        customer_mobile: '9876543210',
+        items: [
+          { id: items[0].id, name: items[0].name, price: items[0].price, gst: items[0].gst, quantity: 2 },
+          { id: items[2].id, name: items[2].name, price: items[2].price, gst: items[2].gst, quantity: 1 }
+        ],
+        discount: 200
+      },
+      {
+        customer_name: 'Priya Sharma',
+        customer_mobile: '9876543211',
+        items: [
+          { id: items[1].id, name: items[1].name, price: items[1].price, gst: items[1].gst, quantity: 1 },
+          { id: items[4].id, name: items[4].name, price: items[4].price, gst: items[4].gst, quantity: 2 }
+        ],
+        discount: 0
+      },
+      {
+        customer_name: 'Amit Patel',
+        customer_mobile: '9876543212',
+        items: [
+          { id: items[3].id, name: items[3].name, price: items[3].price, gst: items[3].gst, quantity: 1 },
+          { id: items[6].id, name: items[6].name, price: items[6].price, gst: items[6].gst, quantity: 1 },
+          { id: items[7].id, name: items[7].name, price: items[7].price, gst: items[7].gst, quantity: 1 }
+        ],
+        discount: 150
+      }
+    ];
+
+    // Calculate totals for each invoice
+    sampleInvoices.forEach((invoice, index) => {
+      let subtotal = 0;
+      let totalGST = 0;
+      let totalInclusive = 0;
+
+      invoice.items.forEach(item => {
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = item.price * (100 - item.gst) / 100;
+        const baseTotal = basePrice * item.quantity;
+        const gstAmount = inclusiveTotal - baseTotal;
+        
+        subtotal += baseTotal;
+        totalGST += gstAmount;
+        totalInclusive += inclusiveTotal;
+      });
+
+      const cgst = totalGST / 2;
+      const sgst = totalGST / 2;
+      const total = Math.max(0, totalInclusive - invoice.discount);
+
+      const itemsJson = JSON.stringify(invoice.items);
+
+      db.run(
+        'INSERT INTO invoices (customer_name, customer_mobile, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [invoice.customer_name, invoice.customer_mobile, itemsJson, subtotal, cgst, sgst, invoice.discount, total],
+        function(err) {
+          if (err) {
+            console.error(`Error inserting invoice ${index + 1}:`, err.message);
+          } else {
+            console.log(`✓ Created invoice #${this.lastID} for ${invoice.customer_name}`);
+          }
+
+          if (index === sampleInvoices.length - 1) {
+            console.log('\n✅ Demo data populated successfully!');
+            console.log(`   - ${sampleInvoices.length + 10} items added`);
+            console.log(`   - ${sampleInvoices.length} sample invoices created`);
+            console.log('\n🚀 You can now start the server and view the demo!');
+            db.close();
+          }
+        }
+      );
+    });
+  });
+}
+
