@@ -13,13 +13,24 @@
             <h1>Bombay Dyeing</h1>
             <p class="subtitle">NKM Trading Company</p>
             <nav>
-                <a href="/demo" class="nav-link">Demo</a>
-                <a href="/dashboard" class="nav-link">Dashboard</a>
-                <a href="/" class="nav-link">Items</a>
-                <a href="/billing" class="nav-link active">Billing</a>
-                <a href="/quotations" class="nav-link">Create Quotations</a>
-                <a href="/quotations-list" class="nav-link">Quotations List</a>
-                <a href="/invoices" class="nav-link">Invoices</a>
+                <div class="nav-group">
+                    <a href="/demo" class="nav-link">Demo</a>
+                    <a href="/dashboard" class="nav-link">Dashboard</a>
+                </div>
+                <div class="nav-group">
+                    <div class="nav-group-title">Inventory</div>
+                    <a href="/" class="nav-link">Items</a>
+                </div>
+                <div class="nav-group">
+                    <div class="nav-group-title">Billing & Invoices</div>
+                    <a href="/billing" class="nav-link active">Billing</a>
+                    <a href="/invoices" class="nav-link">Invoices</a>
+                </div>
+                <div class="nav-group">
+                    <div class="nav-group-title">Quotations</div>
+                    <a href="/quotations" class="nav-link">Create Quotation</a>
+                    <a href="/quotations-list" class="nav-link">Quotation List</a>
+                </div>
             </nav>
         </header>
 
