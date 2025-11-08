@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bombay Dyeing - Item Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bombay Dyeing</h1>
+            <p class="subtitle">Bedding & Linen Shop - Item Management</p>
+            <nav>
+                <a href="/" class="nav-link active">Items</a>
+                <a href="/billing" class="nav-link">Billing</a>
+                <a href="/invoices" class="nav-link">Invoices</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="section">
+                <h2>Add New Item</h2>
+                <form id="addItemForm" class="form">
+                    <div class="form-group">
+                        <label for="itemName">Item Name *</label>
+                        <input type="text" id="itemName" required placeholder="Enter item name">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemGST">GST (%) *</label>
+                            <input type="number" id="itemGST" required step="0.01" min="0" max="100" placeholder="e.g., 18">
+                        </div>
+                        <div class="form-group">
+                            <label for="itemPrice">Price (₹) - Inclusive of GST *</label>
+                            <input type="number" id="itemPrice" required step="0.01" min="0" placeholder="e.g., 1180">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </form>
+            </div>
+
+            <div class="section">
+                <h2>Item Database</h2>
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search items by name..." onkeyup="searchItems()">
+                </div>
+                <div class="table-container">
+                    <table id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Item Name</th>
+                                <th>GST (%)</th>
+                                <th>Price (₹) - Incl. GST</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                            <!-- Items will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Item</h2>
+            <form id="editItemForm" class="form">
+                <input type="hidden" id="editItemId">
+                <div class="form-group">
+                    <label for="editItemName">Item Name *</label>
+                    <input type="text" id="editItemName" required placeholder="Enter item name">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editItemGST">GST (%) *</label>
+                        <input type="number" id="editItemGST" required step="0.01" min="0" max="100" placeholder="e.g., 18">
+                    </div>
+                    <div class="form-group">
+                        <label for="editItemPrice">Price (₹) - Inclusive of GST *</label>
+                        <input type="number" id="editItemPrice" required step="0.01" min="0" placeholder="e.g., 1180">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Update Item</button>
+                    <button type="button" class="btn btn-danger" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="items.js"></script>
+</body>
+</html>
+

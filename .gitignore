@@ -1,0 +1,6 @@
+node_modules/
+pos.db
+*.log
+.DS_Store
+.env
+

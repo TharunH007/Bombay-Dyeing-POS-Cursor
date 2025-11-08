@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bombay Dyeing - Billing</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bombay Dyeing</h1>
+            <p class="subtitle">Bedding & Linen Shop - Billing</p>
+            <nav>
+                <a href="/" class="nav-link">Items</a>
+                <a href="/billing" class="nav-link active">Billing</a>
+                <a href="/invoices" class="nav-link">Invoices</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="billing-layout">
+                <div class="left-panel">
+                    <div class="section">
+                        <h2>Customer Information</h2>
+                        <form id="customerForm" class="form">
+                            <div class="form-group">
+                                <label for="customerName">Customer Name *</label>
+                                <input type="text" id="customerName" required placeholder="Enter customer name">
+                            </div>
+                            <div class="form-group">
+                                <label for="customerMobile">Mobile Number *</label>
+                                <input type="tel" id="customerMobile" required placeholder="Enter mobile number">
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="section">
+                        <h2>Add Items</h2>
+                        <div class="search-bar">
+                            <input type="text" id="itemSearchInput" placeholder="Search items..." onkeyup="searchItemsForBilling()">
+                        </div>
+                        <div class="items-list" id="itemsList">
+                            <!-- Items will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-panel">
+                    <div class="section">
+                        <h2>Bill Items</h2>
+                        <div class="table-container">
+                            <table id="billTable">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Price</th>
+                                        <th>GST</th>
+                                        <th>Total</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="billTableBody">
+                                    <!-- Bill items will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="bill-summary">
+                            <div class="summary-row">
+                                <span>Subtotal:</span>
+                                <span id="subtotal">₹0.00</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>CGST:</span>
+                                <span id="cgst">₹0.00</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>SGST:</span>
+                                <span id="sgst">₹0.00</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="discount">Discount (₹)</label>
+                                <input type="number" id="discount" step="0.01" min="0" value="0" onchange="calculateTotal()" placeholder="0.00">
+                            </div>
+                            <div class="summary-row total">
+                                <span>Total:</span>
+                                <span id="total">₹0.00</span>
+                            </div>
+                            <button type="button" class="btn btn-success btn-large" onclick="submitBill()">Submit Bill</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="billing.js"></script>
+</body>
+</html>
+

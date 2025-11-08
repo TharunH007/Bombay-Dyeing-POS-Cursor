@@ -1,0 +1,330 @@
+let allItems = [];
+let billItems = [];
+
+// Load items on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadItems();
+    calculateTotal();
+});
+
+// Load all items for selection
+function loadItems() {
+    fetch('/api/items')
+        .then(response => response.json())
+        .then(data => {
+            allItems = data;
+            displayItems(data);
+        })
+        .catch(error => {
+            console.error('Error loading items:', error);
+            alert('Error loading items. Please try again.');
+        });
+}
+
+// Display items in left panel
+function displayItems(items) {
+    const itemsList = document.getElementById('itemsList');
+    itemsList.innerHTML = '';
+
+    if (items.length === 0) {
+        itemsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">No items available. Please add items first.</p>';
+        return;
+    }
+
+    items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.onclick = () => addItemToBill(item);
+        card.innerHTML = `
+            <h4>${item.name}</h4>
+            <p>Price: ₹${parseFloat(item.price).toFixed(2)} (Incl. GST ${item.gst}%)</p>
+        `;
+        itemsList.appendChild(card);
+    });
+}
+
+// Search items for billing
+function searchItemsForBilling() {
+    const searchTerm = document.getElementById('itemSearchInput').value.trim().toLowerCase();
+    const filtered = allItems.filter(item => 
+        item.name.toLowerCase().includes(searchTerm)
+    );
+    displayItems(filtered);
+}
+
+// Add item to bill
+function addItemToBill(item) {
+    // Check if item already exists in bill
+    const existingItem = billItems.find(bi => bi.id === item.id);
+    
+    if (existingItem) {
+        existingItem.quantity += 1;
+    } else {
+        billItems.push({
+            id: item.id,
+            name: item.name,
+            price: parseFloat(item.price),
+            gst: parseFloat(item.gst),
+            quantity: 1
+        });
+    }
+    
+    updateBillTable();
+    calculateTotal();
+}
+
+// Remove item from bill
+function removeItemFromBill(index) {
+    billItems.splice(index, 1);
+    updateBillTable();
+    calculateTotal();
+}
+
+// Calculate base price from inclusive price
+// GST is calculated as percentage of inclusive price
+// Example: ₹1000 with 20% GST = ₹200 GST, ₹800 base
+function calculateBasePrice(inclusivePrice, gstRate) {
+    return inclusivePrice * (100 - gstRate) / 100;
+}
+
+// Update bill table
+function updateBillTable() {
+    const tbody = document.getElementById('billTableBody');
+    tbody.innerHTML = '';
+
+    if (billItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No items in bill</td></tr>';
+        return;
+    }
+
+    billItems.forEach((item, index) => {
+        // Price is inclusive of GST, so calculate base price and GST amount
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
+        const baseTotal = basePrice * item.quantity;
+        const gstAmount = inclusiveTotal - baseTotal;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${item.name} (Qty: ${item.quantity})</td>
+            <td>₹${baseTotal.toFixed(2)}</td>
+            <td>₹${gstAmount.toFixed(2)}</td>
+            <td>₹${inclusiveTotal.toFixed(2)}</td>
+            <td>
+                <button class="btn btn-danger" onclick="removeItemFromBill(${index})">Remove</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Calculate total
+function calculateTotal() {
+    let subtotal = 0;
+    let totalGST = 0;
+    let totalInclusive = 0;
+
+    billItems.forEach(item => {
+        // Price is inclusive of GST
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
+        const baseTotal = basePrice * item.quantity;
+        const gstAmount = inclusiveTotal - baseTotal;
+        
+        subtotal += baseTotal;
+        totalGST += gstAmount;
+        totalInclusive += inclusiveTotal;
+    });
+
+    const cgst = totalGST / 2;
+    const sgst = totalGST / 2;
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const total = totalInclusive - discount;
+
+    document.getElementById('subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('cgst').textContent = `₹${cgst.toFixed(2)}`;
+    document.getElementById('sgst').textContent = `₹${sgst.toFixed(2)}`;
+    document.getElementById('total').textContent = `₹${Math.max(0, total).toFixed(2)}`;
+}
+
+// Submit bill
+function submitBill() {
+    if (billItems.length === 0) {
+        alert('Please add at least one item to the bill.');
+        return;
+    }
+
+    const customerName = document.getElementById('customerName').value.trim();
+    const customerMobile = document.getElementById('customerMobile').value.trim();
+    
+    if (!customerName) {
+        alert('Customer Name is required.');
+        document.getElementById('customerName').focus();
+        return;
+    }
+    
+    if (!customerMobile) {
+        alert('Mobile Number is required.');
+        document.getElementById('customerMobile').focus();
+        return;
+    }
+    
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+
+    // Calculate totals (price is inclusive of GST)
+    let subtotal = 0;
+    let totalGST = 0;
+    let totalInclusive = 0;
+
+    billItems.forEach(item => {
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
+        const baseTotal = basePrice * item.quantity;
+        const gstAmount = inclusiveTotal - baseTotal;
+        
+        subtotal += baseTotal;
+        totalGST += gstAmount;
+        totalInclusive += inclusiveTotal;
+    });
+
+    const cgst = totalGST / 2;
+    const sgst = totalGST / 2;
+    const total = Math.max(0, totalInclusive - discount);
+
+    // Prepare invoice data
+    const invoiceData = {
+        customer_name: customerName,
+        customer_mobile: customerMobile,
+        items: billItems,
+        subtotal: subtotal,
+        cgst: cgst,
+        sgst: sgst,
+        discount: discount,
+        total: total
+    };
+
+    // Save invoice to database
+    fetch('/api/invoices', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(invoiceData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            // Generate PDF
+            generatePDF(invoiceData, data.id);
+            // Reset form
+            resetBill();
+            alert('Bill submitted successfully! PDF is being generated.');
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting bill:', error);
+        alert('Error submitting bill. Please try again.');
+    });
+}
+
+// Generate PDF invoice
+function generatePDF(invoiceData, invoiceId) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Company Header
+    doc.setFontSize(20);
+    doc.setFont(undefined, 'bold');
+    doc.text('Bombay Dyeing', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text('Bedding & Linen Shop', 105, 28, { align: 'center' });
+
+    // Invoice Details
+    doc.setFontSize(10);
+    doc.text(`Invoice #: ${invoiceId}`, 20, 40);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 20, 46);
+    
+    if (invoiceData.customer_name) {
+        doc.text(`Customer: ${invoiceData.customer_name}`, 20, 52);
+    }
+    if (invoiceData.customer_mobile) {
+        doc.text(`Mobile: ${invoiceData.customer_mobile}`, 20, 58);
+    }
+
+    // Items Table
+    let yPos = 70;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text('Item', 20, yPos);
+    doc.text('Qty', 80, yPos);
+    doc.text('Price', 100, yPos);
+    doc.text('GST', 130, yPos);
+    doc.text('Total', 160, yPos);
+
+    yPos += 5;
+    doc.setDrawColor(0, 0, 0);
+    doc.line(20, yPos, 190, yPos);
+
+    yPos += 8;
+    doc.setFont(undefined, 'normal');
+
+    invoiceData.items.forEach(item => {
+        // Price is inclusive of GST
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
+        const baseTotal = basePrice * item.quantity;
+        const gstAmount = inclusiveTotal - baseTotal;
+
+        doc.text(item.name, 20, yPos);
+        doc.text(item.quantity.toString(), 80, yPos);
+        doc.text(`₹${baseTotal.toFixed(2)}`, 100, yPos);
+        doc.text(`₹${gstAmount.toFixed(2)}`, 130, yPos);
+        doc.text(`₹${inclusiveTotal.toFixed(2)}`, 160, yPos);
+        yPos += 7;
+    });
+
+    // Summary
+    yPos += 5;
+    doc.line(20, yPos, 190, yPos);
+    yPos += 8;
+
+    doc.text(`Subtotal: ₹${invoiceData.subtotal.toFixed(2)}`, 130, yPos);
+    yPos += 7;
+    doc.text(`CGST: ₹${invoiceData.cgst.toFixed(2)}`, 130, yPos);
+    yPos += 7;
+    doc.text(`SGST: ₹${invoiceData.sgst.toFixed(2)}`, 130, yPos);
+    yPos += 7;
+    
+    if (invoiceData.discount > 0) {
+        doc.text(`Discount: -₹${invoiceData.discount.toFixed(2)}`, 130, yPos);
+        yPos += 7;
+    }
+
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(12);
+    doc.text(`Total: ₹${invoiceData.total.toFixed(2)}`, 130, yPos);
+
+    // Footer
+    yPos = 280;
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    doc.text('Thank you for your business!', 105, yPos, { align: 'center' });
+
+    // Save PDF
+    const fileName = `Bombay_Dyeing_Invoice_${invoiceId}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+}
+
+// Reset bill
+function resetBill() {
+    billItems = [];
+    document.getElementById('customerForm').reset();
+    document.getElementById('discount').value = 0;
+    updateBillTable();
+    calculateTotal();
+}
+
