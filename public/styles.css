@@ -293,6 +293,31 @@ tbody td {
     margin-top: 20px;
 }
 
+.filter-btn {
+    padding: 8px 16px;
+    border: 2px solid #3a3a3a;
+    border-radius: 6px;
+    background: #2a2a2a;
+    color: #e0e0e0;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.filter-btn:hover {
+    background: #333;
+    border-color: #4a9eff;
+    transform: translateY(-1px);
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+    border-color: #4a9eff;
+    color: white;
+    box-shadow: 0 2px 8px rgba(74, 158, 255, 0.4);
+}
+
 .items-list {
     max-height: 500px;
     overflow-y: auto;

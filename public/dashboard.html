@@ -14,7 +14,7 @@
             <p class="subtitle">NKM Trading Company</p>
             <nav>
                 <div class="nav-group">
-                    <a href="/demo" class="nav-link">Demo</a>
+                    <a href="/welcome" class="nav-link">Welcome</a>
                     <a href="/dashboard" class="nav-link active">Dashboard</a>
                 </div>
                 <div class="nav-group">
@@ -46,14 +46,37 @@
             </div>
 
             <div class="section">
+                <h2>Firebase Backup</h2>
+                <div style="margin-bottom: 15px;">
+                    <div id="backupStatus" style="padding: 12px; background: #2a2a2a; border-radius: 6px; margin-bottom: 12px;">
+                        <span style="color: #b0b0b0;">Checking backup status...</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="triggerManualBackup()" style="margin-right: 10px;">Backup Now</button>
+                    <button class="btn btn-success" onclick="showRestoreModal()">Restore from Backup</button>
+                    <p style="color: #888; font-size: 0.9em; margin-top: 10px;">Automatic backups run every hour. Last backup info will appear above.</p>
+                </div>
+            </div>
+
+            <div class="section">
                 <h2>Sales Analytics</h2>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                     <div>
-                        <h3 style="color: #4a9eff; margin-bottom: 15px;">Monthly Sales</h3>
+                        <h3 style="color: #4a9eff; margin-bottom: 10px;">Monthly Sales</h3>
+                        <div class="filter-buttons" style="margin-bottom: 15px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="filter-btn active" onclick="setMonthlyFilter(1)">1 Month</button>
+                            <button class="filter-btn" onclick="setMonthlyFilter(3)">3 Months</button>
+                            <button class="filter-btn" onclick="setMonthlyFilter(5)">5 Months</button>
+                            <button class="filter-btn" onclick="setMonthlyFilter(12)">12 Months</button>
+                        </div>
                         <canvas id="monthlyChart"></canvas>
                     </div>
                     <div>
-                        <h3 style="color: #4a9eff; margin-bottom: 15px;">Yearly Sales</h3>
+                        <h3 style="color: #4a9eff; margin-bottom: 10px;">Yearly Sales</h3>
+                        <div class="filter-buttons" style="margin-bottom: 15px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="filter-btn active" onclick="setYearlyFilter(1)">1 Year</button>
+                            <button class="filter-btn" onclick="setYearlyFilter(3)">3 Years</button>
+                            <button class="filter-btn" onclick="setYearlyFilter(5)">5 Years</button>
+                        </div>
                         <canvas id="yearlyChart"></canvas>
                     </div>
                 </div>

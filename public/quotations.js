@@ -177,6 +177,7 @@ function createQuotation() {
 
     const customerName = document.getElementById('customerName').value.trim();
     const customerMobile = document.getElementById('customerMobile').value.trim();
+    const customerGst = document.getElementById('customerGst').value.trim();
     
     if (!customerName) {
         alert('Customer Name is required.');
@@ -216,6 +217,7 @@ function createQuotation() {
     const quotationData = {
         customer_name: customerName,
         customer_mobile: customerMobile,
+        customer_gst: customerGst || null,
         items: quotationItems,
         subtotal: subtotal,
         cgst: cgst,

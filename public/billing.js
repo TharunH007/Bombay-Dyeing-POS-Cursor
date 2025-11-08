@@ -279,9 +279,12 @@ function generatePDF(invoiceData, invoiceId) {
     if (invoiceData.customer_mobile) {
         doc.text(`Mobile: ${invoiceData.customer_mobile}`, 20, 58);
     }
+    if (invoiceData.customer_gst) {
+        doc.text(`GST No: ${invoiceData.customer_gst}`, 20, 64);
+    }
 
     // Items Table
-    let yPos = 70;
+    let yPos = invoiceData.customer_gst ? 76 : 70;
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.text('Item', 20, yPos);
