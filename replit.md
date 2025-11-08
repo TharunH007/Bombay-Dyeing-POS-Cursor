@@ -6,6 +6,11 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
+- **2025-11-08**: Reorganized navigation into logical groups
+  - Grouped "Billing" and "Invoices" under "Billing & Invoices"
+  - Placed "Items" under "Inventory" group
+  - Grouped "Create Quotation" and "Quotation List" under "Quotations"
+  - Added navigation group titles and improved visual hierarchy
 - **2025-11-08**: Imported from GitHub and configured for Replit environment
   - Updated server to run on port 5000 (required for Replit)
   - Changed binding from localhost to 0.0.0.0 for Replit proxy
