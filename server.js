@@ -425,12 +425,11 @@ app.get('/api/dashboard/monthly-sales', (req, res) => {
   
   db.all(
     `SELECT 
-      strftime('%Y-%m', datetime(created_at)) as month,
-      strftime('%b %Y', datetime(created_at)) as monthLabel,
+      substr(created_at, 1, 7) as month,
       COALESCE(SUM(total), 0) as total
      FROM invoices
-     WHERE datetime(created_at) >= datetime('now', '-' || ? || ' months')
-     GROUP BY strftime('%Y-%m', datetime(created_at))
+     WHERE datetime(substr(created_at, 1, 19)) >= datetime('now', '-' || ? || ' months')
+     GROUP BY substr(created_at, 1, 7)
      ORDER BY month ASC`,
     [months],
     (err, rows) => {
@@ -438,10 +437,16 @@ app.get('/api/dashboard/monthly-sales', (req, res) => {
         res.status(500).json({ error: err.message });
         return;
       }
-      const result = rows.map(row => ({
-        month: row.monthLabel,
-        total: row.total
-      }));
+      // Format month labels in JavaScript
+      const result = rows.map(row => {
+        const [year, month] = row.month.split('-');
+        const date = new Date(year, parseInt(month) - 1);
+        const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return {
+          month: monthLabel,
+          total: row.total
+        };
+      });
       res.json(result);
     }
   );
