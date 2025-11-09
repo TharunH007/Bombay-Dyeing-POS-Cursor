@@ -112,6 +112,8 @@ function addItemToBill(item) {
             name: item.name,
             price: parseFloat(item.price),
             gst: parseFloat(item.gst),
+            mrp: parseFloat(item.mrp || item.price),
+            discount: parseFloat(item.discount || 0),
             quantity: 1
         });
     }
@@ -147,9 +149,8 @@ function updateBillTable() {
     billItems.forEach((item, index) => {
         // Price is inclusive of GST
         const inclusiveTotal = item.price * item.quantity;
-        const basePrice = calculateBasePrice(item.price, item.gst);
-        const baseTotal = basePrice * item.quantity;
-        const gstAmount = inclusiveTotal - baseTotal;
+        const mrpPerUnit = item.mrp || item.price;
+        const discountPercent = item.discount || 0;
 
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -161,8 +162,8 @@ function updateBillTable() {
                     <button class="quantity-btn" onclick="increaseQuantity(${index})">+</button>
                 </div>
             </td>
-            <td>₹${item.price.toFixed(2)}</td>
-            <td>₹${gstAmount.toFixed(2)}</td>
+            <td>₹${mrpPerUnit.toFixed(2)}</td>
+            <td>${discountPercent.toFixed(1)}%</td>
             <td><strong>₹${inclusiveTotal.toFixed(2)}</strong></td>
             <td>
                 <button class="btn btn-danger" onclick="removeItemFromBill(${index})">Remove</button>
