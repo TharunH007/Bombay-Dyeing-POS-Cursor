@@ -1,5 +1,25 @@
 let customers = [];
 
+function normalizeMobile(mobile) {
+    if (!mobile) return null;
+    
+    let cleanMobile = mobile.trim().replace(/\D/g, '');
+    
+    cleanMobile = cleanMobile.replace(/^0+/, '');
+    
+    if (cleanMobile.startsWith('91') && cleanMobile.length > 10) {
+        cleanMobile = cleanMobile.substring(2);
+    }
+    
+    cleanMobile = cleanMobile.replace(/^0+/, '');
+    
+    if (cleanMobile.length === 10) {
+        return cleanMobile;
+    }
+    
+    return null;
+}
+
 async function loadCustomers() {
     try {
         const [invoicesRes, quotationsRes] = await Promise.all([
@@ -14,19 +34,25 @@ async function loadCustomers() {
 
         invoices.forEach(invoice => {
             if (invoice.customer_mobile && invoice.customer_mobile.trim()) {
-                const mobile = invoice.customer_mobile.trim();
+                const normalizedMobile = normalizeMobile(invoice.customer_mobile);
+                const displayMobile = invoice.customer_mobile.trim();
                 const name = invoice.customer_name || 'Unknown';
                 
-                if (!customerMap.has(mobile)) {
-                    customerMap.set(mobile, {
-                        name: name,
-                        mobile: mobile,
-                        lastPurchase: invoice.created_at
-                    });
-                } else {
-                    const existing = customerMap.get(mobile);
-                    if (new Date(invoice.created_at) > new Date(existing.lastPurchase)) {
-                        existing.lastPurchase = invoice.created_at;
+                if (normalizedMobile) {
+                    if (!customerMap.has(normalizedMobile)) {
+                        customerMap.set(normalizedMobile, {
+                            name: name,
+                            mobile: displayMobile,
+                            normalizedMobile: normalizedMobile,
+                            lastPurchase: invoice.created_at
+                        });
+                    } else {
+                        const existing = customerMap.get(normalizedMobile);
+                        if (new Date(invoice.created_at) > new Date(existing.lastPurchase)) {
+                            existing.lastPurchase = invoice.created_at;
+                            existing.name = name;
+                            existing.mobile = displayMobile;
+                        }
                     }
                 }
             }
@@ -34,15 +60,26 @@ async function loadCustomers() {
 
         quotations.forEach(quotation => {
             if (quotation.customer_mobile && quotation.customer_mobile.trim()) {
-                const mobile = quotation.customer_mobile.trim();
+                const normalizedMobile = normalizeMobile(quotation.customer_mobile);
+                const displayMobile = quotation.customer_mobile.trim();
                 const name = quotation.customer_name || 'Unknown';
                 
-                if (!customerMap.has(mobile)) {
-                    customerMap.set(mobile, {
-                        name: name,
-                        mobile: mobile,
-                        lastPurchase: quotation.created_at
-                    });
+                if (normalizedMobile) {
+                    if (!customerMap.has(normalizedMobile)) {
+                        customerMap.set(normalizedMobile, {
+                            name: name,
+                            mobile: displayMobile,
+                            normalizedMobile: normalizedMobile,
+                            lastPurchase: quotation.created_at
+                        });
+                    } else {
+                        const existing = customerMap.get(normalizedMobile);
+                        if (new Date(quotation.created_at) > new Date(existing.lastPurchase)) {
+                            existing.lastPurchase = quotation.created_at;
+                            existing.name = name;
+                            existing.mobile = displayMobile;
+                        }
+                    }
                 }
             }
         });
@@ -102,26 +139,18 @@ function sendWhatsApp(mobile, name) {
         return;
     }
 
-    let cleanMobile = mobile.replace(/\D/g, '');
+    const normalizedMobile = normalizeMobile(mobile);
     
-    if (cleanMobile.startsWith('0')) {
-        cleanMobile = cleanMobile.substring(1);
-    }
-    
-    if (cleanMobile.startsWith('91') && cleanMobile.length > 10) {
-        cleanMobile = cleanMobile.substring(2);
-    }
-    
-    if (cleanMobile.length === 10) {
-        cleanMobile = '91' + cleanMobile;
-    } else {
+    if (!normalizedMobile) {
         alert(`Invalid mobile number format: ${mobile}`);
         return;
     }
 
+    const whatsappMobile = '91' + normalizedMobile;
+
     const personalizedMessage = `Hi ${name}! ${message}`;
     const encodedMessage = encodeURIComponent(personalizedMessage);
-    const whatsappUrl = `https://wa.me/${cleanMobile}?text=${encodedMessage}`;
+    const whatsappUrl = `https://wa.me/${whatsappMobile}?text=${encodedMessage}`;
     
     window.open(whatsappUrl, '_blank');
 }
