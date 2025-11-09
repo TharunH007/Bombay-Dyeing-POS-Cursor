@@ -621,17 +621,18 @@ app.get('/api/dashboard/monthly-sales', (req, res) => {
       substr(created_at, 1, 7) as month,
       COALESCE(SUM(total), 0) as total
      FROM invoices
-     WHERE datetime(substr(created_at, 1, 19)) >= datetime('now', '-' || ? || ' months')
+     WHERE datetime(substr(created_at, 1, 19)) >= datetime('now', 'start of month', '-' || (? - 1) || ' months')
      GROUP BY substr(created_at, 1, 7)
-     ORDER BY month ASC`,
-    [months],
+     ORDER BY month DESC
+     LIMIT ?`,
+    [months, months],
     (err, rows) => {
       if (err) {
         res.status(500).json({ error: err.message });
         return;
       }
-      // Format month labels in JavaScript
-      const result = rows.map(row => {
+      // Format month labels in JavaScript and reverse to show oldest first
+      const result = rows.reverse().map(row => {
         const [year, month] = row.month.split('-');
         const date = new Date(year, parseInt(month) - 1);
         const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -668,6 +669,63 @@ app.get('/api/dashboard/yearly-sales', (req, res) => {
         total: row.total
       }));
       res.json(result);
+    }
+  );
+});
+
+// Get monthly sales report (current month detailed breakdown)
+app.get('/api/dashboard/monthly-report', (req, res) => {
+  const now = new Date();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYear = String(now.getFullYear());
+  
+  db.all(
+    `SELECT * FROM invoices 
+     WHERE strftime('%m', created_at) = ? AND strftime('%Y', created_at) = ?
+     ORDER BY created_at DESC`,
+    [currentMonth, currentYear],
+    (err, invoices) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      
+      let totalSales = 0;
+      let totalCGST = 0;
+      let totalSGST = 0;
+      let totalDiscount = 0;
+      
+      const reportData = invoices.map(invoice => {
+        totalSales += parseFloat(invoice.total || 0);
+        totalCGST += parseFloat(invoice.cgst || 0);
+        totalSGST += parseFloat(invoice.sgst || 0);
+        totalDiscount += parseFloat(invoice.discount || 0);
+        
+        return {
+          invoiceId: invoice.id,
+          date: new Date(invoice.created_at).toLocaleDateString('en-IN'),
+          customerName: invoice.customer_name,
+          customerMobile: invoice.customer_mobile,
+          subtotal: parseFloat(invoice.subtotal || 0),
+          cgst: parseFloat(invoice.cgst || 0),
+          sgst: parseFloat(invoice.sgst || 0),
+          discount: parseFloat(invoice.discount || 0),
+          total: parseFloat(invoice.total || 0)
+        };
+      });
+      
+      res.json({
+        month: `${now.toLocaleDateString('en-US', { month: 'long' })} ${currentYear}`,
+        invoices: reportData,
+        summary: {
+          totalInvoices: invoices.length,
+          totalSales: totalSales.toFixed(2),
+          totalCGST: totalCGST.toFixed(2),
+          totalSGST: totalSGST.toFixed(2),
+          totalGST: (totalCGST + totalSGST).toFixed(2),
+          totalDiscount: totalDiscount.toFixed(2)
+        }
+      });
     }
   );
 });
@@ -786,8 +844,11 @@ app.get('/api/backup/status', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+const HOST = process.env.REPL_ID ? '0.0.0.0' : 'localhost';
+app.listen(PORT, HOST, () => {
+  const url = HOST === 'localhost' ? `http://localhost:${PORT}` : `http://0.0.0.0:${PORT}`;
+  console.log(`Server running on ${url}`);
+  console.log(`Access in browser: http://localhost:${PORT}`);
   console.log('Local backup system ready');
   console.log('Backups will be saved to ./backups/ folder');
 });

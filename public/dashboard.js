@@ -32,11 +32,11 @@ function loadDashboardData() {
 function setMonthlyFilter(months) {
     monthlyFilter = months;
     
-    // Update active button state
-    document.querySelectorAll('.filter-buttons button').forEach((btn, index) => {
-        if (btn.parentElement.previousElementSibling.textContent.includes('Monthly')) {
-            btn.classList.remove('active');
-        }
+    // Update active button state - find the parent filter-buttons div and update its buttons
+    const monthlySection = document.querySelector('#monthlyChart').closest('div');
+    const filterButtons = monthlySection.querySelector('.filter-buttons');
+    filterButtons.querySelectorAll('button').forEach(btn => {
+        btn.classList.remove('active');
     });
     event.target.classList.add('active');
     
@@ -54,11 +54,11 @@ function setMonthlyFilter(months) {
 function setYearlyFilter(years) {
     yearlyFilter = years;
     
-    // Update active button state
-    document.querySelectorAll('.filter-buttons button').forEach((btn, index) => {
-        if (btn.parentElement.previousElementSibling.textContent.includes('Yearly')) {
-            btn.classList.remove('active');
-        }
+    // Update active button state - find the parent filter-buttons div and update its buttons
+    const yearlySection = document.querySelector('#yearlyChart').closest('div');
+    const filterButtons = yearlySection.querySelector('.filter-buttons');
+    filterButtons.querySelectorAll('button').forEach(btn => {
+        btn.classList.remove('active');
     });
     event.target.classList.add('active');
     
@@ -114,21 +114,21 @@ function createMonthlyChart(data) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        color: '#b0b0b0',
+                        color: '#666',
                         callback: function(value) {
                             return '₹' + value.toLocaleString('en-IN');
                         }
                     },
                     grid: {
-                        color: '#333'
+                        display: false
                     }
                 },
                 x: {
                     ticks: {
-                        color: '#b0b0b0'
+                        color: '#666'
                     },
                     grid: {
-                        color: '#333'
+                        display: false
                     }
                 }
             }
@@ -178,21 +178,21 @@ function createYearlyChart(data) {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        color: '#b0b0b0',
+                        color: '#666',
                         callback: function(value) {
                             return '₹' + value.toLocaleString('en-IN');
                         }
                     },
                     grid: {
-                        color: '#333'
+                        display: false
                     }
                 },
                 x: {
                     ticks: {
-                        color: '#b0b0b0'
+                        color: '#666'
                     },
                     grid: {
-                        color: '#333'
+                        display: false
                     }
                 }
             }
@@ -373,6 +373,56 @@ function performRestore() {
         statusDiv.innerHTML = `<span style="color: #e74c3c;">⚠ Restore failed</span>`;
         alert('Error during restore. Please try again.');
     });
+}
+
+// Download monthly sales report
+function downloadMonthlySalesReport() {
+    fetch('/api/dashboard/monthly-report')
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error generating report: ' + data.error);
+                return;
+            }
+            
+            // Create CSV content
+            let csv = `Monthly Sales Report - ${data.month}\n\n`;
+            csv += `Summary\n`;
+            csv += `Total Invoices,${data.summary.totalInvoices}\n`;
+            csv += `Total Sales,₹${data.summary.totalSales}\n`;
+            csv += `Total CGST,₹${data.summary.totalCGST}\n`;
+            csv += `Total SGST,₹${data.summary.totalSGST}\n`;
+            csv += `Total GST,₹${data.summary.totalGST}\n`;
+            csv += `Total Discount,₹${data.summary.totalDiscount}\n`;
+            csv += `\n\n`;
+            
+            // Add invoice details
+            csv += `Invoice Details\n`;
+            csv += `Invoice ID,Date,Customer Name,Mobile,Subtotal,CGST,SGST,Discount,Total\n`;
+            
+            data.invoices.forEach(invoice => {
+                csv += `${invoice.invoiceId},${invoice.date},${invoice.customerName},${invoice.customerMobile},`;
+                csv += `₹${invoice.subtotal.toFixed(2)},₹${invoice.cgst.toFixed(2)},₹${invoice.sgst.toFixed(2)},`;
+                csv += `₹${invoice.discount.toFixed(2)},₹${invoice.total.toFixed(2)}\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const filename = `Monthly_Sales_Report_${data.month.replace(' ', '_')}.csv`;
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        })
+        .catch(error => {
+            console.error('Error downloading report:', error);
+            alert('Error downloading report. Please try again.');
+        });
 }
 
 // Check backup status on page load
