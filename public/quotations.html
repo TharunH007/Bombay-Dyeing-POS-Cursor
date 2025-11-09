@@ -39,20 +39,24 @@
                 <h2>Customer Information</h2>
                 <form id="customerForm" class="form">
                     <div class="form-group">
-                        <label for="customerName">Customer Name *</label>
-                        <input type="text" id="customerName" required placeholder="Enter customer name">
-                    </div>
-                    <div class="form-group">
                         <label for="customerMobile">Mobile Number *</label>
                         <input type="tel" id="customerMobile" required placeholder="Enter mobile number">
                     </div>
                     <div class="form-group">
-                        <label for="customerGst">GST Number (Optional)</label>
-                        <input type="text" id="customerGst" placeholder="Enter GST number (e.g., 29ABCDE1234F1Z5)">
+                        <label for="customerName">Customer Name *</label>
+                        <input type="text" id="customerName" required placeholder="Enter customer name">
+                    </div>
+                    <div class="form-group">
+                        <label for="customerGst">Customer GST Number (Optional)</label>
+                        <input type="text" id="customerGst" placeholder="Enter customer GST number (e.g., 29ABCDE1234F1Z5)">
                     </div>
                     <div class="form-group">
                         <label for="customerAddress">Customer Address (Optional)</label>
                         <textarea id="customerAddress" rows="3" placeholder="Enter customer address"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="companyGst">Company GST Number</label>
+                        <input type="text" id="companyGst" value="33ACDPH9227M1ZG" placeholder="Company GST Number">
                     </div>
                 </form>
             </div>

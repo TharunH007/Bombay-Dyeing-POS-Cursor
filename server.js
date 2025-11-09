@@ -672,6 +672,63 @@ app.get('/api/dashboard/yearly-sales', (req, res) => {
   );
 });
 
+// Get monthly sales report (current month detailed breakdown)
+app.get('/api/dashboard/monthly-report', (req, res) => {
+  const now = new Date();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYear = String(now.getFullYear());
+  
+  db.all(
+    `SELECT * FROM invoices 
+     WHERE strftime('%m', created_at) = ? AND strftime('%Y', created_at) = ?
+     ORDER BY created_at DESC`,
+    [currentMonth, currentYear],
+    (err, invoices) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      
+      let totalSales = 0;
+      let totalCGST = 0;
+      let totalSGST = 0;
+      let totalDiscount = 0;
+      
+      const reportData = invoices.map(invoice => {
+        totalSales += parseFloat(invoice.total || 0);
+        totalCGST += parseFloat(invoice.cgst || 0);
+        totalSGST += parseFloat(invoice.sgst || 0);
+        totalDiscount += parseFloat(invoice.discount || 0);
+        
+        return {
+          invoiceId: invoice.id,
+          date: new Date(invoice.created_at).toLocaleDateString('en-IN'),
+          customerName: invoice.customer_name,
+          customerMobile: invoice.customer_mobile,
+          subtotal: parseFloat(invoice.subtotal || 0),
+          cgst: parseFloat(invoice.cgst || 0),
+          sgst: parseFloat(invoice.sgst || 0),
+          discount: parseFloat(invoice.discount || 0),
+          total: parseFloat(invoice.total || 0)
+        };
+      });
+      
+      res.json({
+        month: `${now.toLocaleDateString('en-US', { month: 'long' })} ${currentYear}`,
+        invoices: reportData,
+        summary: {
+          totalInvoices: invoices.length,
+          totalSales: totalSales.toFixed(2),
+          totalCGST: totalCGST.toFixed(2),
+          totalSGST: totalSGST.toFixed(2),
+          totalGST: (totalCGST + totalSGST).toFixed(2),
+          totalDiscount: totalDiscount.toFixed(2)
+        }
+      });
+    }
+  );
+});
+
 // Get top 5 most sold items
 app.get('/api/dashboard/top-items', (req, res) => {
   db.all('SELECT * FROM invoices', [], (err, invoices) => {
