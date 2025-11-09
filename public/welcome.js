@@ -1,4 +1,5 @@
 let customers = [];
+let allCustomers = [];
 
 function normalizeMobile(mobile) {
     if (!mobile) return null;
@@ -84,9 +85,10 @@ async function loadCustomers() {
             }
         });
 
-        customers = Array.from(customerMap.values());
-
-        customers.sort((a, b) => new Date(b.lastPurchase) - new Date(a.lastPurchase));
+        allCustomers = Array.from(customerMap.values());
+        allCustomers.sort((a, b) => new Date(b.lastPurchase) - new Date(a.lastPurchase));
+        
+        customers = [...allCustomers];
 
         displayCustomers();
         
@@ -101,28 +103,43 @@ function displayCustomers() {
     const emptyState = document.getElementById('emptyState');
     const customerList = document.getElementById('customerList');
     const customerCount = document.getElementById('customerCount');
+    const selectedCount = document.getElementById('selectedCount');
 
     if (customers.length === 0) {
         container.style.display = 'none';
-        emptyState.innerHTML = '<p style="font-size: 1.1em; opacity: 0.9;">No customers found. Create some invoices or quotations first.</p>';
+        emptyState.style.display = 'block';
+        
+        if (allCustomers.length === 0) {
+            emptyState.innerHTML = '<p style="font-size: 1.1em; color: #718096;">No customers found. Create some invoices or quotations first.</p>';
+        } else {
+            emptyState.innerHTML = '<p style="font-size: 1.1em; color: #718096;">No customers match your search. Try a different keyword.</p>';
+        }
         return;
     }
 
     emptyState.style.display = 'none';
     container.style.display = 'block';
     customerCount.textContent = customers.length;
+    if (selectedCount) {
+        selectedCount.textContent = '0';
+    }
 
     customerList.innerHTML = customers.map((customer, index) => `
-        <div class="customer-item" onclick="sendWhatsApp('${customer.mobile}', '${customer.name.replace(/'/g, "\\'")}')">
-            <div class="customer-info">
+        <div class="customer-item">
+            <input type="checkbox" id="customer-${index}" class="customer-checkbox" onchange="updateSelectedCount()">
+            <div class="customer-info" onclick="sendWhatsApp('${customer.mobile}', '${customer.name.replace(/'/g, "\\'")}')">
                 <strong>${customer.name}</strong>
                 <small>📱 ${customer.mobile} • Last: ${formatDate(customer.lastPurchase)}</small>
             </div>
-            <span style="color: #25d366; font-size: 1.5em;">💬</span>
+            <span style="color: #25d366; font-size: 1.5em;" onclick="sendWhatsApp('${customer.mobile}', '${customer.name.replace(/'/g, "\\'")}')">💬</span>
         </div>
     `).join('');
 
-    updateMessagePreview();
+    if (!window.messagePreviewInitialized) {
+        updateMessagePreview();
+        window.messagePreviewInitialized = true;
+    }
+    updateSelectedCount();
 }
 
 function formatDate(dateString) {
@@ -156,13 +173,70 @@ function sendWhatsApp(mobile, name) {
 }
 
 function selectAllCustomers() {
-    const checkboxes = document.querySelectorAll('.customer-item input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
     checkboxes.forEach(cb => cb.checked = true);
+    updateSelectedCount();
 }
 
 function clearSelection() {
-    const checkboxes = document.querySelectorAll('.customer-item input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
     checkboxes.forEach(cb => cb.checked = false);
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('.customer-checkbox:checked');
+    const selectedCount = document.getElementById('selectedCount');
+    if (selectedCount) {
+        selectedCount.textContent = checkboxes.length;
+    }
+}
+
+function sendToSelected() {
+    const message = document.getElementById('promoMessage').value.trim();
+    
+    if (!message) {
+        alert('Please enter a promotional message first!');
+        return;
+    }
+
+    const checkboxes = document.querySelectorAll('.customer-checkbox:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one customer!');
+        return;
+    }
+
+    let sentCount = 0;
+    checkboxes.forEach((checkbox, index) => {
+        const customerIndex = parseInt(checkbox.id.replace('customer-', ''));
+        const customer = customers[customerIndex];
+        
+        if (customer) {
+            setTimeout(() => {
+                sendWhatsApp(customer.mobile, customer.name);
+            }, index * 1000);
+            sentCount++;
+        }
+    });
+
+    alert(`Opening WhatsApp for ${sentCount} customers. Each will open in a new tab with a 1-second delay.`);
+}
+
+function searchCustomers() {
+    const searchTerm = document.getElementById('customerSearch').value.toLowerCase().trim();
+    
+    if (!searchTerm) {
+        customers = [...allCustomers];
+    } else {
+        customers = allCustomers.filter(customer => {
+            const nameMatch = customer.name.toLowerCase().includes(searchTerm);
+            const mobileMatch = customer.mobile.includes(searchTerm);
+            return nameMatch || mobileMatch;
+        });
+    }
+    
+    displayCustomers();
 }
 
 function updateMessagePreview() {

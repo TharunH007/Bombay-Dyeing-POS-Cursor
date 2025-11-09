@@ -571,54 +571,46 @@ tbody td {
 }
 
 /* WhatsApp Feature Styles */
-.whatsapp-section {
-    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-    color: white;
-    padding: 28px;
-    border-radius: 14px;
-    box-shadow: 0 8px 24px rgba(37, 211, 102, 0.25);
-}
-
-.whatsapp-section h2 {
-    color: white;
-    border-bottom-color: rgba(255, 255, 255, 0.3);
-}
-
 .customer-list {
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
-    background: rgba(255, 255, 255, 0.1);
+    background: #fafbfc;
     border-radius: 10px;
     padding: 12px;
     margin: 15px 0;
+    border: 1.5px solid #e8ecf1;
 }
 
 .customer-item {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 12px;
+    background: white;
+    padding: 14px;
     margin-bottom: 8px;
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    cursor: pointer;
+    gap: 14px;
     transition: all 0.2s;
     color: #2c3e50;
+    border: 1.5px solid #e8ecf1;
 }
 
 .customer-item:hover {
-    background: white;
-    transform: translateX(4px);
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    transform: translateY(-1px);
 }
 
 .customer-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
+    accent-color: #667eea;
+    flex-shrink: 0;
 }
 
 .customer-info {
     flex: 1;
+    cursor: pointer;
 }
 
 .customer-info strong {
@@ -626,18 +618,19 @@ tbody td {
     color: #2c3e50;
     font-weight: 600;
     margin-bottom: 4px;
+    font-size: 1.05em;
 }
 
 .customer-info small {
     color: #718096;
-    font-size: 0.85em;
+    font-size: 0.9em;
 }
 
 .message-preview {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 16px;
+    background: #f8f9fa;
+    padding: 18px;
     border-radius: 10px;
     margin: 15px 0;
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #2c3e50;
+    border: 1.5px solid #e8ecf1;
 }
