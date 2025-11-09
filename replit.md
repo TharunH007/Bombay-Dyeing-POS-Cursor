@@ -6,6 +6,19 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
+- **2025-11-09**: Added auto-fetch customer data and business details updates
+  - Auto-fetch customer name in billing page when mobile number is entered
+  - Auto-fetch customer name, GST, and address in quotations page
+  - Added optional customer address field to quotations
+  - Customer GST and address included when converting quotation to invoice
+  - Updated PDF invoice generation with NKM TRADING COMPANY business details:
+    - Business: NKM TRADING COMPANY
+    - Address: 114, Prince Manor, Purasawalkam High Road, Chennai - 600 010
+    - GST: 33ACDPH9227M1ZG
+    - Mobile: +91 9380742424
+  - Customer address and GST number displayed in PDF invoices
+  - Created `/api/customers/search` endpoint with robust mobile number matching
+  - Handles all Indian mobile formats with spaces, dashes, parentheses, +91 prefix
 - **2025-11-09**: Enhanced WhatsApp promotional messaging with customer selection
   - Added customer search to filter by name or mobile number
   - Implemented checkbox selection for cherry-picking customers
@@ -80,8 +93,8 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 
 ### Database Schema
 - **items**: id, name, gst (%), price (inclusive), created_at
-- **invoices**: id, customer_name, customer_mobile, items (JSON), subtotal, cgst, sgst, discount, total, created_at
-- **quotations**: Same structure as invoices
+- **invoices**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON), subtotal, cgst, sgst, discount, total, created_at
+- **quotations**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON), subtotal, cgst, sgst, discount, total, created_at
 
 ### Key Features
 1. **WhatsApp Messaging**: Free promotional messaging using click-to-chat links (no API costs)
@@ -95,8 +108,9 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 
 ### API Endpoints
 - Items: GET/POST/PUT/DELETE `/api/items`
-- Invoices: GET/POST `/api/invoices`
-- Quotations: GET/POST/DELETE `/api/quotations`, POST `/api/quotations/:id/convert`
+- Invoices: GET/POST `/api/invoices`, GET `/api/invoices/:id`
+- Quotations: GET/POST/DELETE `/api/quotations`, GET `/api/quotations/:id`, POST `/api/quotations/:id/convert`
+- Customers: GET `/api/customers/search?mobile=XXX` (auto-fetch customer data)
 - Dashboard: GET `/api/dashboard/monthly-total`, `/monthly-sales`, `/yearly-sales`, `/top-items`
 
 ## Development
