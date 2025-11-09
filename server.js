@@ -425,12 +425,12 @@ app.get('/api/dashboard/monthly-sales', (req, res) => {
   
   db.all(
     `SELECT 
-      strftime('%Y-%m', created_at) as month,
-      strftime('%b %Y', created_at) as monthLabel,
+      strftime('%Y-%m', datetime(created_at)) as month,
+      strftime('%b %Y', datetime(created_at)) as monthLabel,
       COALESCE(SUM(total), 0) as total
      FROM invoices
-     WHERE created_at >= datetime('now', '-' || ? || ' months')
-     GROUP BY strftime('%Y-%m', created_at)
+     WHERE datetime(created_at) >= datetime('now', '-' || ? || ' months')
+     GROUP BY strftime('%Y-%m', datetime(created_at))
      ORDER BY month ASC`,
     [months],
     (err, rows) => {
