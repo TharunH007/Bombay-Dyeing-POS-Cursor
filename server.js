@@ -3,7 +3,6 @@ const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
-const cron = require('node-cron');
 const backup = require('./backup');
 
 const app = express();
@@ -556,13 +555,6 @@ app.get('/dashboard', (req, res) => {
 // Backup API Routes
 app.post('/api/backup/manual', async (req, res) => {
   try {
-    if (!backup.isFirebaseConfigured()) {
-      return res.status(503).json({ 
-        error: 'Firebase not configured', 
-        message: 'Please add FIREBASE_SERVICE_ACCOUNT to Replit Secrets' 
-      });
-    }
-    
     const result = await backup.backupToFirebase();
     res.json(result);
   } catch (error) {
@@ -572,15 +564,8 @@ app.post('/api/backup/manual', async (req, res) => {
 
 app.post('/api/backup/restore', async (req, res) => {
   try {
-    if (!backup.isFirebaseConfigured()) {
-      return res.status(503).json({ 
-        error: 'Firebase not configured', 
-        message: 'Please add FIREBASE_SERVICE_ACCOUNT to Replit Secrets' 
-      });
-    }
-    
-    const { backupId } = req.body;
-    const result = await backup.restoreFromFirebase(backupId);
+    const { filename } = req.body;
+    const result = await backup.restoreFromFirebase(filename);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -589,13 +574,6 @@ app.post('/api/backup/restore', async (req, res) => {
 
 app.get('/api/backup/list', async (req, res) => {
   try {
-    if (!backup.isFirebaseConfigured()) {
-      return res.status(503).json({ 
-        error: 'Firebase not configured', 
-        message: 'Please add FIREBASE_SERVICE_ACCOUNT to Replit Secrets' 
-      });
-    }
-    
     const backups = await backup.listBackups();
     res.json(backups);
   } catch (error) {
@@ -604,38 +582,20 @@ app.get('/api/backup/list', async (req, res) => {
 });
 
 app.get('/api/backup/status', (req, res) => {
+  const latestBackup = backup.getLatestBackupInfo();
   res.json({ 
-    configured: backup.isFirebaseConfigured(),
-    message: backup.isFirebaseConfigured() 
-      ? 'Firebase backup is configured and ready' 
-      : 'Firebase not configured. Add FIREBASE_SERVICE_ACCOUNT to Replit Secrets'
+    configured: true,
+    type: 'local',
+    message: 'Local backup system ready',
+    latestBackup
   });
-});
-
-// Automatic hourly backup scheduler
-cron.schedule('0 * * * *', async () => {
-  console.log('Running automatic hourly backup...');
-  try {
-    if (backup.isFirebaseConfigured()) {
-      await backup.backupToFirebase();
-      console.log('Automatic backup completed successfully');
-    } else {
-      console.log('Automatic backup skipped: Firebase not configured');
-    }
-  } catch (error) {
-    console.error('Automatic backup failed:', error.message);
-  }
 });
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
-  console.log('Automatic hourly backups enabled');
-  if (backup.isFirebaseConfigured()) {
-    console.log('Firebase backup configured and ready');
-  } else {
-    console.log('Firebase not configured - add FIREBASE_SERVICE_ACCOUNT to enable backups');
-  }
+  console.log('Local backup system ready');
+  console.log('Backups will be saved to ./backups/ folder');
 });
 
 // Graceful shutdown
