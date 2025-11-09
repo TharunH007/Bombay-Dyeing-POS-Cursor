@@ -46,14 +46,14 @@
             </div>
 
             <div class="section">
-                <h2>Firebase Backup</h2>
+                <h2>Local Backup</h2>
                 <div style="margin-bottom: 15px;">
                     <div id="backupStatus" style="padding: 12px; background: #2a2a2a; border-radius: 6px; margin-bottom: 12px;">
                         <span style="color: #b0b0b0;">Checking backup status...</span>
                     </div>
                     <button class="btn btn-primary" onclick="triggerManualBackup()" style="margin-right: 10px;">Backup Now</button>
                     <button class="btn btn-success" onclick="showRestoreModal()">Restore from Backup</button>
-                    <p style="color: #888; font-size: 0.9em; margin-top: 10px;">Automatic backups run every hour. Last backup info will appear above.</p>
+                    <p style="color: #888; font-size: 0.9em; margin-top: 10px;">Backups are saved as JSON files in the backups/ folder. Click "Backup Now" to create a backup anytime.</p>
                 </div>
             </div>
 
