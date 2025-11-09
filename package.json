@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "demo": "node demo-data.js"
+    "demo": "node demo-data.js",
+    "reset": "node reset-database.js"
   },
   "keywords": [
     "pos",
