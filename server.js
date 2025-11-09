@@ -621,17 +621,18 @@ app.get('/api/dashboard/monthly-sales', (req, res) => {
       substr(created_at, 1, 7) as month,
       COALESCE(SUM(total), 0) as total
      FROM invoices
-     WHERE datetime(substr(created_at, 1, 19)) >= datetime('now', '-' || ? || ' months')
+     WHERE datetime(substr(created_at, 1, 19)) >= datetime('now', 'start of month', '-' || (? - 1) || ' months')
      GROUP BY substr(created_at, 1, 7)
-     ORDER BY month ASC`,
-    [months],
+     ORDER BY month DESC
+     LIMIT ?`,
+    [months, months],
     (err, rows) => {
       if (err) {
         res.status(500).json({ error: err.message });
         return;
       }
-      // Format month labels in JavaScript
-      const result = rows.map(row => {
+      // Format month labels in JavaScript and reverse to show oldest first
+      const result = rows.reverse().map(row => {
         const [year, month] = row.month.split('-');
         const date = new Date(year, parseInt(month) - 1);
         const monthLabel = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
