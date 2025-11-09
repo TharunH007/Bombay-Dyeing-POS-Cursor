@@ -6,6 +6,14 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
+- **2025-11-09**: Enhanced WhatsApp promotional messaging with customer selection
+  - Added customer search to filter by name or mobile number
+  - Implemented checkbox selection for cherry-picking customers
+  - "Select All" and "Clear All" buttons for quick selection
+  - "Send to Selected" feature to message multiple customers (1-second delay between each)
+  - Real-time selection count display (X total, Y selected)
+  - Improved readability with clean white background and better contrast
+  - Empty state feedback for "no customers" and "no search matches"
 - **2025-11-09**: Implemented WhatsApp promotional messaging feature
   - Added welcome page with free WhatsApp click-to-chat messaging
   - Loads customer list from invoices and quotations
@@ -13,6 +21,7 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
   - 100% free solution - no API costs or external services required
   - Personalizes messages with customer names
   - Automatically formats mobile numbers for India (+91)
+  - Handles all Indian formats: 0987..., +9198..., 9876..., etc.
 - **2025-11-09**: Transformed UI to modern light theme
   - Changed from dark theme to sleek light design
   - New color scheme: White/light grey backgrounds with purple gradient accents
