@@ -6,16 +6,34 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
-- **2025-11-09**: Added per-item discount functionality to billing and quotations
-  - Each item can have an individual discount applied at the unit level
-  - Discount applies to GST-inclusive price (reduces both base and GST proportionally)
-  - Added "Disc./Unit" column with inline input field for easy editing
-  - Validation prevents negative discounts and discounts exceeding item price
-  - Calculation: effectivePrice = max(unitPrice - discountPerUnit, 0)
-  - Works alongside invoice-level discount for maximum flexibility
-  - UI shows: Unit Price, Disc./Unit, Base (after discount), GST, Total
-  - Implemented identically in both billing and quotations pages
-  - Demo data includes quotations with various mobile formats for testing
+- **2025-11-09**: Implemented MRP-based item pricing with discount system
+  - Items now have MRP (Maximum Retail Price), optional Discount %, and auto-calculated Price
+  - Item creation UI: MRP field (required), Discount % field (optional), Price field (readonly, auto-calculated)
+  - Calculation: Price = MRP × (1 - Discount/100), stored as GST-inclusive
+  - Database schema updated: added `mrp` and `discount` columns to items table
+  - Auto-migration sets mrp = price for existing items to maintain backward compatibility
+  - Item display table shows: ID | Name | MRP | Discount% | Price | GST% | Actions
+- **2025-11-09**: Added duplicate validation for items and customers
+  - Item names validated with case-insensitive duplicate check on create/edit
+  - Customer mobile numbers validated across invoices and quotations
+  - Allows same customer name with same mobile (repeat business)
+  - Blocks different customer name with same mobile with clear error message
+  - Format-agnostic mobile matching handles spaces, dashes, parentheses, +91 prefix
+- **2025-11-09**: Enhanced customer auto-fill with visual feedback
+  - Mobile number input highlights green when existing customer detected
+  - Customer name auto-fills and becomes read-only for existing customers
+  - Grey background on locked name field with tooltip explaining the lock
+  - Quotations page auto-fills name, GST, and address from existing records
+  - Styling resets when mobile cleared or changed to non-existing customer
+- **2025-11-09**: Fixed quotation-to-invoice conversion
+  - Quotations are now preserved after converting to invoice
+  - Removed automatic deletion of quotations upon conversion
+  - Success message confirms quotation entry is retained for record-keeping
+- **2025-11-09**: Removed per-item discount from billing and quotations
+  - Discounts are now defined at item creation (MRP/Discount system) only
+  - Billing and quotation tables simplified: Item | Qty | Unit Price | GST | Total | Actions
+  - Removed "Disc./Unit" column and per-transaction discount functionality
+  - Invoice-level discount still available for additional flexibility
 - **2025-11-09**: Fixed WhatsApp multi-customer send feature
   - Replaced array index-based approach with data attribute method
   - Checkboxes now store customer data directly (data-mobile, data-name)
@@ -107,9 +125,9 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 ```
 
 ### Database Schema
-- **items**: id, name, gst (%), price (inclusive), created_at
-- **invoices**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON with discountPerUnit field), subtotal, cgst, sgst, discount, total, created_at
-- **quotations**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON with discountPerUnit field), subtotal, cgst, sgst, discount, total, created_at
+- **items**: id, name, mrp (REAL), discount (REAL, optional), price (REAL, calculated), gst (%), created_at
+- **invoices**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON), subtotal, cgst, sgst, discount, total, created_at
+- **quotations**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON), subtotal, cgst, sgst, discount, total, created_at
 
 **Items JSON Format:**
 ```json
@@ -118,20 +136,27 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
   "name": "Item Name",
   "price": 1000.00,
   "gst": 12,
-  "quantity": 2,
-  "discountPerUnit": 50.00
+  "quantity": 2
 }]
 ```
 
+**Pricing Model:**
+- Items are created with MRP and optional Discount%
+- Final Price = MRP × (1 - Discount/100), stored as GST-inclusive
+- During billing/quotations, items use the pre-calculated price
+- Invoice-level discount can still be applied to the entire order
+
 ### Key Features
 1. **WhatsApp Messaging**: Free promotional messaging using click-to-chat links (no API costs), multi-customer send with search filters
-2. **Item Management**: Add, edit, delete, search items with GST-inclusive pricing
-3. **Billing System**: Create bills with automatic GST calculation (CGST/SGST split), per-item and invoice-level discounts
-4. **Quotations**: Create quotations and convert them to invoices, per-item and quotation-level discounts
+2. **Item Management**: MRP-based pricing with optional discount percentage, duplicate item name validation (case-insensitive)
+3. **Billing System**: Create bills with automatic GST calculation (CGST/SGST split), invoice-level discount, customer auto-fill with visual highlighting
+4. **Quotations**: Create quotations and convert them to invoices (quotations preserved), customer auto-fill with GST/address
 5. **Invoice History**: View, search, and download PDF invoices
 6. **Dashboard**: Monthly/yearly sales analytics and top-selling items
 7. **PDF Export**: Professional invoice PDFs with company branding
 8. **Local Backup**: Manual backup system saves database to JSON files in `backups/` folder with restore capability
+9. **Duplicate Prevention**: Case-insensitive item name validation, customer mobile number validation across all transactions
+10. **Smart Customer Recognition**: Auto-fill with green highlight for existing customers, read-only name field to prevent data inconsistency
 
 ### API Endpoints
 - Items: GET/POST/PUT/DELETE `/api/items`
@@ -165,6 +190,14 @@ Demo data includes:
 - **Local-first architecture**: No cloud hosting dependencies, designed for local business operations
 - **Free solutions preferred**: Implemented WhatsApp click-to-chat instead of paid SMS/messaging APIs
 - **Modern light theme**: Professional appearance with light backgrounds and clean design
+- **Single-system design**: Designed for single POS terminal, no cloud hosting required
+- **Data integrity**: Duplicate prevention for items and customers, quotations preserved after conversion
+
+## Design Decisions
+- **Pricing Model**: Discounts defined at item level (MRP/Discount), not per-transaction
+- **Customer Management**: Mobile number is unique identifier, prevents multiple names for same number
+- **Quotation Workflow**: Quotations always preserved after converting to invoice for audit trail
+- **Auto-fill Behavior**: Existing customer name becomes read-only to maintain data consistency
 
 ## Technical Notes
 - **WhatsApp Integration**: Uses wa.me links instead of Twilio API (user declined paid integration)
