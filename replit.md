@@ -6,6 +6,16 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
+- **2025-11-09**: Replaced Firebase backup with local file backup system
+  - Removed Firebase dependencies (firebase-admin)
+  - Implemented local JSON file backup system in `backups/` folder
+  - Updated dashboard UI to show "Local Backup" instead of "Firebase Backup"
+  - Removed automatic hourly backups (manual backups only)
+  - Backup files saved with timestamps for version history
+  - Maintains last 30 backups automatically
+- **2025-11-09**: Fixed monthly sales chart display issue
+  - Updated SQLite date queries to handle ISO 8601 format dates
+  - Monthly sales chart now displays correctly with month labels
 - **2025-11-08**: Reorganized navigation into logical groups
   - Grouped "Billing" and "Invoices" under "Billing & Invoices"
   - Placed "Items" under "Inventory" group
@@ -28,9 +38,11 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 ### Directory Structure
 ```
 ├── server.js              # Express server with all API routes
+├── backup.js              # Local backup system
 ├── demo-data.js           # Script to populate sample data
 ├── package.json           # Node.js dependencies
 ├── pos.db                 # SQLite database (auto-created)
+├── backups/               # Local backup files (JSON format)
 └── public/                # Frontend static files
     ├── index.html         # Item management page
     ├── billing.html       # Create invoices/bills
@@ -55,6 +67,7 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 4. **Invoice History**: View, search, and download PDF invoices
 5. **Dashboard**: Monthly/yearly sales analytics and top-selling items
 6. **PDF Export**: Professional invoice PDFs with company branding
+7. **Local Backup**: Manual backup system saves database to JSON files in `backups/` folder with restore capability
 
 ### API Endpoints
 - Items: GET/POST/PUT/DELETE `/api/items`
