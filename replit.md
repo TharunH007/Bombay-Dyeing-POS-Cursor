@@ -6,6 +6,21 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
+- **2025-11-09**: Added per-item discount functionality to billing and quotations
+  - Each item can have an individual discount applied at the unit level
+  - Discount applies to GST-inclusive price (reduces both base and GST proportionally)
+  - Added "Disc./Unit" column with inline input field for easy editing
+  - Validation prevents negative discounts and discounts exceeding item price
+  - Calculation: effectivePrice = max(unitPrice - discountPerUnit, 0)
+  - Works alongside invoice-level discount for maximum flexibility
+  - UI shows: Unit Price, Disc./Unit, Base (after discount), GST, Total
+  - Implemented identically in both billing and quotations pages
+  - Demo data includes quotations with various mobile formats for testing
+- **2025-11-09**: Fixed WhatsApp multi-customer send feature
+  - Replaced array index-based approach with data attribute method
+  - Checkboxes now store customer data directly (data-mobile, data-name)
+  - Eliminates index mismatch issues when search filters are applied
+  - Multi-send now works reliably with any search/filter combination
 - **2025-11-09**: Added auto-fetch customer data and business details updates
   - Auto-fetch customer name in billing page when mobile number is entered
   - Auto-fetch customer name, GST, and address in quotations page
@@ -93,14 +108,26 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 
 ### Database Schema
 - **items**: id, name, gst (%), price (inclusive), created_at
-- **invoices**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON), subtotal, cgst, sgst, discount, total, created_at
-- **quotations**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON), subtotal, cgst, sgst, discount, total, created_at
+- **invoices**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON with discountPerUnit field), subtotal, cgst, sgst, discount, total, created_at
+- **quotations**: id, customer_name, customer_mobile, customer_gst, customer_address, items (JSON with discountPerUnit field), subtotal, cgst, sgst, discount, total, created_at
+
+**Items JSON Format:**
+```json
+[{
+  "id": 1,
+  "name": "Item Name",
+  "price": 1000.00,
+  "gst": 12,
+  "quantity": 2,
+  "discountPerUnit": 50.00
+}]
+```
 
 ### Key Features
-1. **WhatsApp Messaging**: Free promotional messaging using click-to-chat links (no API costs)
+1. **WhatsApp Messaging**: Free promotional messaging using click-to-chat links (no API costs), multi-customer send with search filters
 2. **Item Management**: Add, edit, delete, search items with GST-inclusive pricing
-3. **Billing System**: Create bills with automatic GST calculation (CGST/SGST split)
-4. **Quotations**: Create quotations and convert them to invoices
+3. **Billing System**: Create bills with automatic GST calculation (CGST/SGST split), per-item and invoice-level discounts
+4. **Quotations**: Create quotations and convert them to invoices, per-item and quotation-level discounts
 5. **Invoice History**: View, search, and download PDF invoices
 6. **Dashboard**: Monthly/yearly sales analytics and top-selling items
 7. **PDF Export**: Professional invoice PDFs with company branding
@@ -119,10 +146,15 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 The server runs automatically on port 5000. Access the application through the Replit webview.
 
 ### Demo Data
-To populate the database with sample items and invoices:
+To populate the database with sample items, invoices, and quotations:
 ```bash
 npm run demo
 ```
+
+Demo data includes:
+- 10 sample bedding/linen items with GST-inclusive prices
+- 5 sample invoices with various customer details
+- 3 sample quotations testing different mobile formats and customer data combinations
 
 ### Environment
 - Port: 5000 (configured for Replit)
