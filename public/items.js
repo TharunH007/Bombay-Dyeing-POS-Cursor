@@ -36,7 +36,7 @@ function displayItems(items) {
     tbody.innerHTML = '';
 
     if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No items found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No items found</td></tr>';
         return;
     }
 
@@ -46,7 +46,7 @@ function displayItems(items) {
         editBtn.className = 'btn btn-primary';
         editBtn.style.marginRight = '5px';
         editBtn.textContent = 'Edit';
-        editBtn.onclick = () => editItem(item.id, item.name, item.gst, item.price);
+        editBtn.onclick = () => editItem(item.id, item.name, item.gst, item.mrp, item.discount, item.price);
         
         const removeBtn = document.createElement('button');
         removeBtn.className = 'btn btn-danger';
@@ -57,25 +57,47 @@ function displayItems(items) {
         actionsCell.appendChild(editBtn);
         actionsCell.appendChild(removeBtn);
         
+        const mrp = item.mrp || item.price;
+        const discount = item.discount || 0;
+        
         row.innerHTML = `
             <td>${item.id}</td>
             <td>${item.name}</td>
-            <td>${item.gst}%</td>
+            <td>₹${parseFloat(mrp).toFixed(2)}</td>
+            <td>${discount > 0 ? discount + '%' : '-'}</td>
             <td>₹${parseFloat(item.price).toFixed(2)}</td>
+            <td>${item.gst}%</td>
         `;
         row.appendChild(actionsCell);
         tbody.appendChild(row);
     });
 }
 
+// Calculate item price
+function calculateItemPrice() {
+    const mrp = parseFloat(document.getElementById('itemMRP').value) || 0;
+    const discount = parseFloat(document.getElementById('itemDiscount').value) || 0;
+    const price = mrp * (1 - discount / 100);
+    document.getElementById('itemPrice').value = price > 0 ? price.toFixed(2) : '';
+}
+
+// Calculate edit item price
+function calculateEditItemPrice() {
+    const mrp = parseFloat(document.getElementById('editItemMRP').value) || 0;
+    const discount = parseFloat(document.getElementById('editItemDiscount').value) || 0;
+    const price = mrp * (1 - discount / 100);
+    document.getElementById('editItemPrice').value = price > 0 ? price.toFixed(2) : '';
+}
+
 // Add new item
 function addItem() {
     const name = document.getElementById('itemName').value.trim();
     const gst = parseFloat(document.getElementById('itemGST').value);
-    const price = parseFloat(document.getElementById('itemPrice').value);
+    const mrp = parseFloat(document.getElementById('itemMRP').value);
+    const discount = parseFloat(document.getElementById('itemDiscount').value) || 0;
 
-    if (!name || isNaN(gst) || isNaN(price)) {
-        alert('Please fill in all fields correctly.');
+    if (!name || isNaN(gst) || isNaN(mrp)) {
+        alert('Please fill in all required fields correctly.');
         return;
     }
 
@@ -84,7 +106,7 @@ function addItem() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name, gst, price })
+        body: JSON.stringify({ name, gst, mrp, discount: discount > 0 ? discount : null })
     })
     .then(response => response.json())
     .then(data => {
@@ -135,10 +157,12 @@ function searchItems() {
 }
 
 // Edit item - open modal
-function editItem(id, name, gst, price) {
+function editItem(id, name, gst, mrp, discount, price) {
     document.getElementById('editItemId').value = id;
     document.getElementById('editItemName').value = name;
     document.getElementById('editItemGST').value = gst;
+    document.getElementById('editItemMRP').value = mrp || price;
+    document.getElementById('editItemDiscount').value = discount || '';
     document.getElementById('editItemPrice').value = price;
     document.getElementById('editModal').style.display = 'block';
 }
@@ -154,10 +178,11 @@ function updateItem() {
     const id = document.getElementById('editItemId').value;
     const name = document.getElementById('editItemName').value.trim();
     const gst = parseFloat(document.getElementById('editItemGST').value);
-    const price = parseFloat(document.getElementById('editItemPrice').value);
+    const mrp = parseFloat(document.getElementById('editItemMRP').value);
+    const discount = parseFloat(document.getElementById('editItemDiscount').value) || 0;
 
-    if (!name || isNaN(gst) || isNaN(price)) {
-        alert('Please fill in all fields correctly.');
+    if (!name || isNaN(gst) || isNaN(mrp)) {
+        alert('Please fill in all required fields correctly.');
         return;
     }
 
@@ -166,7 +191,7 @@ function updateItem() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name, gst, price })
+        body: JSON.stringify({ name, gst, mrp, discount: discount > 0 ? discount : null })
     })
     .then(response => response.json())
     .then(data => {

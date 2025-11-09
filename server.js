@@ -40,11 +40,47 @@ function initializeDatabase() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     gst REAL NOT NULL,
+    mrp REAL,
+    discount REAL,
     price REAL NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`, (err) => {
     if (err) {
       console.error('Error creating items table:', err.message);
+    }
+  });
+
+  // Add mrp and discount columns to existing items table if they don't exist
+  db.all("PRAGMA table_info(items)", [], (err, columns) => {
+    if (err) {
+      console.error('Error checking items table:', err.message);
+      return;
+    }
+    const hasMrpColumn = columns.some(col => col.name === 'mrp');
+    const hasDiscountColumn = columns.some(col => col.name === 'discount');
+    
+    if (!hasMrpColumn) {
+      db.run('ALTER TABLE items ADD COLUMN mrp REAL DEFAULT NULL', (err) => {
+        if (err) {
+          console.error('Error adding mrp to items:', err.message);
+        } else {
+          console.log('Added mrp column to items table');
+          // Migrate existing items: set mrp = price
+          db.run('UPDATE items SET mrp = price WHERE mrp IS NULL', (err) => {
+            if (err) console.error('Error migrating mrp:', err.message);
+          });
+        }
+      });
+    }
+    
+    if (!hasDiscountColumn) {
+      db.run('ALTER TABLE items ADD COLUMN discount REAL DEFAULT NULL', (err) => {
+        if (err) {
+          console.error('Error adding discount to items:', err.message);
+        } else {
+          console.log('Added discount column to items table');
+        }
+      });
     }
   });
 
@@ -237,51 +273,85 @@ app.get('/api/items', (req, res) => {
 
 // Add item
 app.post('/api/items', (req, res) => {
-  const { name, gst, price } = req.body;
+  const { name, gst, mrp, discount } = req.body;
 
-  if (!name || gst === undefined || price === undefined) {
-    res.status(400).json({ error: 'Name, GST, and Price are required' });
+  if (!name || gst === undefined || mrp === undefined) {
+    res.status(400).json({ error: 'Name, GST, and MRP are required' });
     return;
   }
 
-  db.run(
-    'INSERT INTO items (name, gst, price) VALUES (?, ?, ?)',
-    [name, parseFloat(gst), parseFloat(price)],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id: this.lastID, name, gst, price });
+  // Check for duplicate item name (case-insensitive)
+  db.get('SELECT id FROM items WHERE LOWER(name) = LOWER(?)', [name], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
     }
-  );
+    
+    if (row) {
+      res.status(400).json({ error: 'Item with this name already exists in database' });
+      return;
+    }
+
+    // Calculate price from MRP and discount
+    const discountPercent = discount ? parseFloat(discount) : 0;
+    const price = parseFloat(mrp) * (1 - discountPercent / 100);
+
+    db.run(
+      'INSERT INTO items (name, gst, mrp, discount, price) VALUES (?, ?, ?, ?, ?)',
+      [name, parseFloat(gst), parseFloat(mrp), discountPercent || null, price],
+      function(err) {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        res.json({ id: this.lastID, name, gst, mrp, discount: discountPercent || null, price });
+      }
+    );
+  });
 });
 
 // Update item
 app.put('/api/items/:id', (req, res) => {
   const id = req.params.id;
-  const { name, gst, price } = req.body;
+  const { name, gst, mrp, discount } = req.body;
 
-  if (!name || gst === undefined || price === undefined) {
-    res.status(400).json({ error: 'Name, GST, and Price are required' });
+  if (!name || gst === undefined || mrp === undefined) {
+    res.status(400).json({ error: 'Name, GST, and MRP are required' });
     return;
   }
 
-  db.run(
-    'UPDATE items SET name = ?, gst = ?, price = ? WHERE id = ?',
-    [name, parseFloat(gst), parseFloat(price), id],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      if (this.changes === 0) {
-        res.status(404).json({ error: 'Item not found' });
-        return;
-      }
-      res.json({ id, name, gst, price, message: 'Item updated successfully' });
+  // Check for duplicate item name (excluding current item, case-insensitive)
+  db.get('SELECT id FROM items WHERE LOWER(name) = LOWER(?) AND id != ?', [name, id], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
     }
-  );
+    
+    if (row) {
+      res.status(400).json({ error: 'Item with this name already exists in database' });
+      return;
+    }
+
+    // Calculate price from MRP and discount
+    const discountPercent = discount ? parseFloat(discount) : 0;
+    const price = parseFloat(mrp) * (1 - discountPercent / 100);
+
+    db.run(
+      'UPDATE items SET name = ?, gst = ?, mrp = ?, discount = ?, price = ? WHERE id = ?',
+      [name, parseFloat(gst), parseFloat(mrp), discountPercent || null, price, id],
+      function(err) {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        if (this.changes === 0) {
+          res.status(404).json({ error: 'Item not found' });
+          return;
+        }
+        res.json({ id, name, gst, mrp, discount: discountPercent || null, price, message: 'Item updated successfully' });
+      }
+    );
+  });
 });
 
 // Remove item
@@ -315,19 +385,41 @@ app.post('/api/invoices', (req, res) => {
     return;
   }
 
-  const itemsJson = JSON.stringify(items);
-
-  db.run(
-    'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [customer_name || '', customer_mobile || '', customer_gst || null, customer_address || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id: this.lastID, message: 'Invoice created successfully' });
+  // Check for duplicate customer mobile number
+  const normalizedMobile = normalizeMobile(customer_mobile);
+  db.get(`
+    SELECT customer_name, customer_mobile FROM invoices 
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_mobile, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '') LIKE ?
+    UNION
+    SELECT customer_name, customer_mobile FROM quotations
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_mobile, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '') LIKE ?
+    LIMIT 1
+  `, [`%${normalizedMobile}%`, `%${normalizedMobile}%`], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
     }
-  );
+    
+    // Allow if customer already exists with same name, or if it's a new customer
+    if (row && row.customer_name.toLowerCase() !== customer_name.toLowerCase()) {
+      res.status(400).json({ error: `Mobile number already exists for customer: ${row.customer_name}` });
+      return;
+    }
+
+    const itemsJson = JSON.stringify(items);
+
+    db.run(
+      'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [customer_name || '', customer_mobile || '', customer_gst || null, customer_address || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
+      function(err) {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        res.json({ id: this.lastID, message: 'Invoice created successfully' });
+      }
+    );
+  });
 });
 
 // Get all invoices
@@ -412,25 +504,46 @@ app.post('/api/quotations', (req, res) => {
     return;
   }
 
-  const itemsJson = JSON.stringify(items);
-
-  db.run(
-    'INSERT INTO quotations (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [customer_name, customer_mobile, customer_gst || null, customer_address || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
-    function(err) {
-      if (err) {
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      res.json({ id: this.lastID, message: 'Quotation created successfully' });
+  // Check for duplicate customer mobile number
+  const normalizedMobile = normalizeMobile(customer_mobile);
+  db.get(`
+    SELECT customer_name, customer_mobile FROM invoices 
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_mobile, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '') LIKE ?
+    UNION
+    SELECT customer_name, customer_mobile FROM quotations
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_mobile, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '') LIKE ?
+    LIMIT 1
+  `, [`%${normalizedMobile}%`, `%${normalizedMobile}%`], (err, row) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
     }
-  );
+    
+    // Allow if customer already exists with same name, or if it's a new customer
+    if (row && row.customer_name.toLowerCase() !== customer_name.toLowerCase()) {
+      res.status(400).json({ error: `Mobile number already exists for customer: ${row.customer_name}` });
+      return;
+    }
+
+    const itemsJson = JSON.stringify(items);
+
+    db.run(
+      'INSERT INTO quotations (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [customer_name, customer_mobile, customer_gst || null, customer_address || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
+      function(err) {
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        res.json({ id: this.lastID, message: 'Quotation created successfully' });
+      }
+    );
+  });
 });
 
-// Convert quotation to invoice
+// Convert quotation to invoice (quotation is kept by default)
 app.post('/api/quotations/:id/convert', (req, res) => {
   const id = req.params.id;
-  const { deleteQuotation } = req.body;
 
   // Get quotation
   db.get('SELECT * FROM quotations WHERE id = ?', [id], (err, quotation) => {
@@ -443,7 +556,7 @@ app.post('/api/quotations/:id/convert', (req, res) => {
       return;
     }
 
-    // Create invoice from quotation
+    // Create invoice from quotation (quotation remains in database)
     db.run(
       'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [quotation.customer_name, quotation.customer_mobile, quotation.customer_gst, quotation.customer_address, quotation.items, quotation.subtotal, quotation.cgst, quotation.sgst, quotation.discount, quotation.total],
@@ -453,16 +566,7 @@ app.post('/api/quotations/:id/convert', (req, res) => {
           return;
         }
 
-        // Optionally delete quotation
-        if (deleteQuotation) {
-          db.run('DELETE FROM quotations WHERE id = ?', [id], (err) => {
-            if (err) {
-              console.error('Error deleting quotation:', err.message);
-            }
-          });
-        }
-
-        res.json({ id: this.lastID, message: 'Quotation converted to invoice successfully' });
+        res.json({ id: this.lastID, message: 'Quotation converted to invoice successfully. Quotation entry preserved.' });
       }
     );
   });

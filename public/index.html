@@ -44,11 +44,21 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="itemGST">GST (%) *</label>
-                            <input type="number" id="itemGST" required step="0.01" min="0" max="100" placeholder="e.g., 18">
+                            <input type="number" id="itemGST" required step="0.01" min="0" max="100" placeholder="e.g., 12" onchange="calculateItemPrice()">
                         </div>
                         <div class="form-group">
-                            <label for="itemPrice">Price (₹) - Inclusive of GST *</label>
-                            <input type="number" id="itemPrice" required step="0.01" min="0" placeholder="e.g., 1180">
+                            <label for="itemMRP">MRP (₹) *</label>
+                            <input type="number" id="itemMRP" required step="0.01" min="0" placeholder="e.g., 1000" onchange="calculateItemPrice()">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemDiscount">Discount (%) - Optional</label>
+                            <input type="number" id="itemDiscount" step="0.01" min="0" max="100" placeholder="e.g., 10" onchange="calculateItemPrice()">
+                        </div>
+                        <div class="form-group">
+                            <label for="itemPrice">Calculated Price (₹)</label>
+                            <input type="number" id="itemPrice" step="0.01" min="0" readonly placeholder="Auto-calculated" style="background-color: #f5f5f5;">
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary">Add Item</button>
@@ -66,8 +76,10 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Item Name</th>
+                                <th>MRP (₹)</th>
+                                <th>Discount (%)</th>
+                                <th>Price (₹)</th>
                                 <th>GST (%)</th>
-                                <th>Price (₹) - Incl. GST</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -94,11 +106,21 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="editItemGST">GST (%) *</label>
-                        <input type="number" id="editItemGST" required step="0.01" min="0" max="100" placeholder="e.g., 18">
+                        <input type="number" id="editItemGST" required step="0.01" min="0" max="100" placeholder="e.g., 12" onchange="calculateEditItemPrice()">
                     </div>
                     <div class="form-group">
-                        <label for="editItemPrice">Price (₹) - Inclusive of GST *</label>
-                        <input type="number" id="editItemPrice" required step="0.01" min="0" placeholder="e.g., 1180">
+                        <label for="editItemMRP">MRP (₹) *</label>
+                        <input type="number" id="editItemMRP" required step="0.01" min="0" placeholder="e.g., 1000" onchange="calculateEditItemPrice()">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editItemDiscount">Discount (%) - Optional</label>
+                        <input type="number" id="editItemDiscount" step="0.01" min="0" max="100" placeholder="e.g., 10" onchange="calculateEditItemPrice()">
+                    </div>
+                    <div class="form-group">
+                        <label for="editItemPrice">Calculated Price (₹)</label>
+                        <input type="number" id="editItemPrice" step="0.01" min="0" readonly placeholder="Auto-calculated" style="background-color: #f5f5f5;">
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px;">
