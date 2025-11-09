@@ -62,22 +62,46 @@ function autoFetchCustomerData() {
     const nameInput = document.getElementById('customerName');
     const gstInput = document.getElementById('customerGst');
     const addressInput = document.getElementById('customerAddress');
+    const mobileInput = document.getElementById('customerMobile');
     
-    if (!mobile) return;
+    if (!mobile || mobile.length < 6) {
+        // Reset styling if mobile is cleared or too short
+        mobileInput.style.backgroundColor = '';
+        mobileInput.style.border = '';
+        nameInput.readOnly = false;
+        nameInput.style.backgroundColor = '';
+        nameInput.title = '';
+        return;
+    }
     
     fetch(`/api/customers/search?mobile=${encodeURIComponent(mobile)}`)
         .then(response => response.json())
         .then(data => {
-            if (data.found) {
-                if (data.customer_name && !nameInput.value) {
-                    nameInput.value = data.customer_name;
-                }
+            if (data.found && data.customer_name) {
+                // Highlight that existing customer was found
+                mobileInput.style.backgroundColor = '#d4edda'; // Light green
+                mobileInput.style.border = '2px solid #28a745'; // Green border
+                
+                // Auto-fill and lock customer name
+                nameInput.value = data.customer_name;
+                nameInput.readOnly = true;
+                nameInput.style.backgroundColor = '#f5f5f5';
+                nameInput.title = 'Customer name is locked because this mobile number exists in the system';
+                
+                // Auto-fill other fields if available
                 if (data.customer_gst && !gstInput.value) {
                     gstInput.value = data.customer_gst;
                 }
                 if (data.customer_address && !addressInput.value) {
                     addressInput.value = data.customer_address;
                 }
+            } else {
+                // Reset styling for new customer
+                mobileInput.style.backgroundColor = '';
+                mobileInput.style.border = '';
+                nameInput.readOnly = false;
+                nameInput.style.backgroundColor = '';
+                nameInput.title = '';
             }
         })
         .catch(error => {
@@ -98,8 +122,7 @@ function addItemToQuotation(item) {
             name: item.name,
             price: parseFloat(item.price),
             gst: parseFloat(item.gst),
-            quantity: 1,
-            discountPerUnit: 0
+            quantity: 1
         });
     }
     
@@ -125,18 +148,14 @@ function updateQuotationTable() {
     tbody.innerHTML = '';
 
     if (quotationItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No items in quotation</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No items in quotation</td></tr>';
         return;
     }
 
     quotationItems.forEach((item, index) => {
-        // Apply per-unit discount to calculate effective unit price
-        const discountPerUnit = parseFloat(item.discountPerUnit) || 0;
-        const effectiveUnitPrice = Math.max(item.price - discountPerUnit, 0);
-        
-        // Calculate totals from effective price
-        const inclusiveTotal = effectiveUnitPrice * item.quantity;
-        const basePrice = calculateBasePrice(effectiveUnitPrice, item.gst);
+        // Price is inclusive of GST
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
         const baseTotal = basePrice * item.quantity;
         const gstAmount = inclusiveTotal - baseTotal;
 
@@ -151,14 +170,6 @@ function updateQuotationTable() {
                 </div>
             </td>
             <td>₹${item.price.toFixed(2)}</td>
-            <td>
-                <input type="number" min="0" max="${item.price}" step="1" 
-                       value="${discountPerUnit}" 
-                       onchange="updateQuotationItemDiscount(${index}, this.value)"
-                       onclick="event.stopPropagation()"
-                       style="width: 70px; padding: 4px; border: 1px solid #cbd5e0; border-radius: 4px;">
-            </td>
-            <td>₹${baseTotal.toFixed(2)}</td>
             <td>₹${gstAmount.toFixed(2)}</td>
             <td><strong>₹${inclusiveTotal.toFixed(2)}</strong></td>
             <td>
@@ -167,26 +178,6 @@ function updateQuotationTable() {
         `;
         tbody.appendChild(row);
     });
-}
-
-// Update item discount
-function updateQuotationItemDiscount(index, value) {
-    const discount = parseFloat(value) || 0;
-    const item = quotationItems[index];
-    
-    // Validate: discount must be >= 0 and < item price
-    if (discount < 0) {
-        quotationItems[index].discountPerUnit = 0;
-        alert('Discount cannot be negative!');
-    } else if (discount >= item.price) {
-        quotationItems[index].discountPerUnit = item.price - 0.01;
-        alert(`Discount cannot be equal to or exceed the item price (₹${item.price.toFixed(2)})`);
-    } else {
-        quotationItems[index].discountPerUnit = discount;
-    }
-    
-    updateQuotationTable();
-    calculateTotal();
 }
 
 // Increase quantity
@@ -212,13 +203,9 @@ function calculateTotal() {
     let totalInclusive = 0;
 
     quotationItems.forEach(item => {
-        // Apply per-unit discount to calculate effective unit price
-        const discountPerUnit = parseFloat(item.discountPerUnit) || 0;
-        const effectiveUnitPrice = Math.max(item.price - discountPerUnit, 0);
-        
-        // Calculate totals from effective price
-        const inclusiveTotal = effectiveUnitPrice * item.quantity;
-        const basePrice = calculateBasePrice(effectiveUnitPrice, item.gst);
+        // Price is inclusive of GST
+        const inclusiveTotal = item.price * item.quantity;
+        const basePrice = calculateBasePrice(item.price, item.gst);
         const baseTotal = basePrice * item.quantity;
         const gstAmount = inclusiveTotal - baseTotal;
         
