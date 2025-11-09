@@ -5,6 +5,10 @@ let quotationItems = [];
 document.addEventListener('DOMContentLoaded', () => {
     loadItems();
     calculateTotal();
+    
+    // Add auto-fetch customer data on mobile blur
+    const mobileInput = document.getElementById('customerMobile');
+    mobileInput.addEventListener('blur', autoFetchCustomerData);
 });
 
 // Load all items for selection
@@ -50,6 +54,35 @@ function searchItemsForQuotation() {
         item.name.toLowerCase().includes(searchTerm)
     );
     displayItems(filtered);
+}
+
+// Auto-fetch customer data when mobile is entered
+function autoFetchCustomerData() {
+    const mobile = document.getElementById('customerMobile').value.trim();
+    const nameInput = document.getElementById('customerName');
+    const gstInput = document.getElementById('customerGst');
+    const addressInput = document.getElementById('customerAddress');
+    
+    if (!mobile) return;
+    
+    fetch(`/api/customers/search?mobile=${encodeURIComponent(mobile)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.found) {
+                if (data.customer_name && !nameInput.value) {
+                    nameInput.value = data.customer_name;
+                }
+                if (data.customer_gst && !gstInput.value) {
+                    gstInput.value = data.customer_gst;
+                }
+                if (data.customer_address && !addressInput.value) {
+                    addressInput.value = data.customer_address;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching customer:', error);
+        });
 }
 
 // Add item to quotation
@@ -178,6 +211,7 @@ function createQuotation() {
     const customerName = document.getElementById('customerName').value.trim();
     const customerMobile = document.getElementById('customerMobile').value.trim();
     const customerGst = document.getElementById('customerGst').value.trim();
+    const customerAddress = document.getElementById('customerAddress').value.trim();
     
     if (!customerName) {
         alert('Customer Name is required.');
@@ -218,6 +252,7 @@ function createQuotation() {
         customer_name: customerName,
         customer_mobile: customerMobile,
         customer_gst: customerGst || null,
+        customer_address: customerAddress || null,
         items: quotationItems,
         subtotal: subtotal,
         cgst: cgst,

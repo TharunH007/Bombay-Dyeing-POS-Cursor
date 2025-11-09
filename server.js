@@ -91,12 +91,24 @@ function initializeDatabase() {
       return;
     }
     const hasGstColumn = columns.some(col => col.name === 'customer_gst');
+    const hasAddressColumn = columns.some(col => col.name === 'customer_address');
+    
     if (!hasGstColumn) {
       db.run('ALTER TABLE invoices ADD COLUMN customer_gst TEXT DEFAULT NULL', (err) => {
         if (err) {
           console.error('Error adding customer_gst to invoices:', err.message);
         } else {
           console.log('Added customer_gst column to invoices table');
+        }
+      });
+    }
+    
+    if (!hasAddressColumn) {
+      db.run('ALTER TABLE invoices ADD COLUMN customer_address TEXT DEFAULT NULL', (err) => {
+        if (err) {
+          console.error('Error adding customer_address to invoices:', err.message);
+        } else {
+          console.log('Added customer_address column to invoices table');
         }
       });
     }
@@ -119,9 +131,87 @@ function initializeDatabase() {
       });
     }
   });
+
+  // Add customer_address column to quotations if it doesn't exist
+  db.all("PRAGMA table_info(quotations)", [], (err, columns) => {
+    if (err) {
+      console.error('Error checking quotations table:', err.message);
+      return;
+    }
+    const hasAddressColumn = columns.some(col => col.name === 'customer_address');
+    if (!hasAddressColumn) {
+      db.run('ALTER TABLE quotations ADD COLUMN customer_address TEXT DEFAULT NULL', (err) => {
+        if (err) {
+          console.error('Error adding customer_address to quotations:', err.message);
+        } else {
+          console.log('Added customer_address column to quotations table');
+        }
+      });
+    }
+  });
+}
+
+// Helper function to normalize mobile numbers
+function normalizeMobile(mobile) {
+  if (!mobile) return '';
+  const digitsOnly = mobile.replace(/\D/g, '');
+  if (digitsOnly.startsWith('91') && digitsOnly.length === 12) {
+    return digitsOnly.substring(2);
+  }
+  if (digitsOnly.length === 10) {
+    return digitsOnly;
+  }
+  return digitsOnly.slice(-10);
 }
 
 // API Routes
+
+// Search customer by mobile number
+app.get('/api/customers/search', (req, res) => {
+  const mobile = req.query.mobile;
+  
+  if (!mobile) {
+    res.status(400).json({ error: 'Mobile number is required' });
+    return;
+  }
+
+  const normalizedMobile = normalizeMobile(mobile);
+  
+  // Require at least 6 digits to avoid spurious matches
+  if (!normalizedMobile || normalizedMobile.length < 6) {
+    res.json({ found: false });
+    return;
+  }
+  
+  db.all(`
+    SELECT customer_name, customer_mobile, customer_gst, customer_address, created_at, 'invoice' as source
+    FROM invoices
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_mobile, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '') LIKE ?
+    UNION
+    SELECT customer_name, customer_mobile, customer_gst, customer_address, created_at, 'quotation' as source
+    FROM quotations
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(customer_mobile, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '') LIKE ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [`%${normalizedMobile}%`, `%${normalizedMobile}%`], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    
+    if (rows.length === 0) {
+      res.json({ found: false });
+    } else {
+      const customer = rows[0];
+      res.json({
+        found: true,
+        customer_name: customer.customer_name,
+        customer_gst: customer.customer_gst,
+        customer_address: customer.customer_address
+      });
+    }
+  });
+});
 
 // Get all items
 app.get('/api/items', (req, res) => {
@@ -213,7 +303,7 @@ app.delete('/api/items/:id', (req, res) => {
 
 // Create invoice
 app.post('/api/invoices', (req, res) => {
-  const { customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total } = req.body;
+  const { customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total } = req.body;
 
   if (!customer_name || !customer_mobile) {
     res.status(400).json({ error: 'Customer name and mobile number are required' });
@@ -228,8 +318,8 @@ app.post('/api/invoices', (req, res) => {
   const itemsJson = JSON.stringify(items);
 
   db.run(
-    'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [customer_name || '', customer_mobile || '', customer_gst || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
+    'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [customer_name || '', customer_mobile || '', customer_gst || null, customer_address || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -310,7 +400,7 @@ app.get('/api/quotations/:id', (req, res) => {
 
 // Create quotation
 app.post('/api/quotations', (req, res) => {
-  const { customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total } = req.body;
+  const { customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total } = req.body;
 
   if (!customer_name || !customer_mobile) {
     res.status(400).json({ error: 'Customer name and mobile number are required' });
@@ -325,8 +415,8 @@ app.post('/api/quotations', (req, res) => {
   const itemsJson = JSON.stringify(items);
 
   db.run(
-    'INSERT INTO quotations (customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [customer_name, customer_mobile, customer_gst || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
+    'INSERT INTO quotations (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [customer_name, customer_mobile, customer_gst || null, customer_address || null, itemsJson, parseFloat(subtotal), parseFloat(cgst), parseFloat(sgst), parseFloat(discount || 0), parseFloat(total)],
     function(err) {
       if (err) {
         res.status(500).json({ error: err.message });
@@ -355,8 +445,8 @@ app.post('/api/quotations/:id/convert', (req, res) => {
 
     // Create invoice from quotation
     db.run(
-      'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [quotation.customer_name, quotation.customer_mobile, quotation.customer_gst, quotation.items, quotation.subtotal, quotation.cgst, quotation.sgst, quotation.discount, quotation.total],
+      'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [quotation.customer_name, quotation.customer_mobile, quotation.customer_gst, quotation.customer_address, quotation.items, quotation.subtotal, quotation.cgst, quotation.sgst, quotation.discount, quotation.total],
       function(err) {
         if (err) {
           res.status(500).json({ error: err.message });

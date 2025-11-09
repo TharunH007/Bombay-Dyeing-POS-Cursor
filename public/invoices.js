@@ -206,31 +206,52 @@ function generatePDF(invoiceData, invoiceId) {
     const doc = new jsPDF();
 
     // Company Header
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setFont(undefined, 'bold');
-    doc.text('Bombay Dyeing', 105, 20, { align: 'center' });
+    doc.text('INVOICE', 105, 15, { align: 'center' });
     
-    doc.setFontSize(12);
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('NKM TRADING COMPANY', 105, 23, { align: 'center' });
+    
+    doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
-    doc.text('Bedding & Linen Shop', 105, 28, { align: 'center' });
+    doc.text('114, Prince Manor', 105, 30, { align: 'center' });
+    doc.text('Purasawalkam High Road, Chennai - 600 010', 105, 35, { align: 'center' });
+    
+    doc.setFontSize(8);
+    doc.text('GST: 33ACDPH9227M1ZG', 20, 42);
+    doc.text('Mobile: +91 9380742424', 140, 42);
 
     // Invoice Details
     doc.setFontSize(10);
-    doc.text(`Invoice #: ${invoiceId}`, 20, 40);
-    doc.text(`Date: ${new Date(invoiceData.created_at).toLocaleDateString('en-IN')}`, 20, 46);
+    doc.setFont(undefined, 'bold');
+    doc.text(`INVOICE NO: ${invoiceId}`, 20, 50);
+    doc.text(`DATE: ${new Date(invoiceData.created_at).toLocaleDateString('en-IN')}`, 140, 50);
     
+    // Customer Details
+    let yPos = 58;
+    doc.setFont(undefined, 'normal');
     if (invoiceData.customer_name) {
-        doc.text(`Customer: ${invoiceData.customer_name}`, 20, 52);
+        doc.text(`Customer: ${invoiceData.customer_name}`, 20, yPos);
+        yPos += 6;
     }
     if (invoiceData.customer_mobile) {
-        doc.text(`Mobile: ${invoiceData.customer_mobile}`, 20, 58);
+        doc.text(`Mobile: ${invoiceData.customer_mobile}`, 20, yPos);
+        yPos += 6;
     }
     if (invoiceData.customer_gst) {
-        doc.text(`GST No: ${invoiceData.customer_gst}`, 20, 64);
+        doc.text(`GST No: ${invoiceData.customer_gst}`, 20, yPos);
+        yPos += 6;
+    }
+    if (invoiceData.customer_address) {
+        const addressLines = doc.splitTextToSize(`Address: ${invoiceData.customer_address}`, 170);
+        doc.text(addressLines, 20, yPos);
+        yPos += (addressLines.length * 5);
     }
 
     // Items Table
-    let yPos = invoiceData.customer_gst ? 76 : 70;
+    yPos += 8;
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.text('Item', 20, yPos);

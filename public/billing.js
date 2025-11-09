@@ -5,6 +5,10 @@ let billItems = [];
 document.addEventListener('DOMContentLoaded', () => {
     loadItems();
     calculateTotal();
+    
+    // Add auto-fetch customer name on mobile blur
+    const mobileInput = document.getElementById('customerMobile');
+    mobileInput.addEventListener('blur', autoFetchCustomerName);
 });
 
 // Load all items for selection
@@ -50,6 +54,27 @@ function searchItemsForBilling() {
         item.name.toLowerCase().includes(searchTerm)
     );
     displayItems(filtered);
+}
+
+// Auto-fetch customer name when mobile is entered
+function autoFetchCustomerName() {
+    const mobile = document.getElementById('customerMobile').value.trim();
+    const nameInput = document.getElementById('customerName');
+    
+    if (!mobile) return;
+    
+    fetch(`/api/customers/search?mobile=${encodeURIComponent(mobile)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.found && data.customer_name) {
+                if (!nameInput.value) {
+                    nameInput.value = data.customer_name;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching customer:', error);
+        });
 }
 
 // Add item to bill
