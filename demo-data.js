@@ -128,14 +128,20 @@ function createSampleInvoices() {
 
       const itemsJson = JSON.stringify(invoice.items);
 
+      // Create invoices with dates spread across the last 3 months
+      const daysAgo = [2, 15, 30, 45, 60, 75, 90][index] || 5;
+      const invoiceDate = new Date();
+      invoiceDate.setDate(invoiceDate.getDate() - daysAgo);
+      const createdAt = invoiceDate.toISOString();
+
       db.run(
-        'INSERT INTO invoices (customer_name, customer_mobile, items, subtotal, cgst, sgst, discount, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [invoice.customer_name, invoice.customer_mobile, itemsJson, subtotal, cgst, sgst, invoice.discount, total],
+        'INSERT INTO invoices (customer_name, customer_mobile, customer_gst, items, subtotal, cgst, sgst, discount, total, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [invoice.customer_name, invoice.customer_mobile, null, itemsJson, subtotal, cgst, sgst, invoice.discount, total, createdAt],
         function(err) {
           if (err) {
             console.error(`Error inserting invoice ${index + 1}:`, err.message);
           } else {
-            console.log(`✓ Created invoice #${this.lastID} for ${invoice.customer_name}`);
+            console.log(`✓ Created invoice #${this.lastID} for ${invoice.customer_name} (${createdAt.split('T')[0]})`);
           }
 
           if (index === sampleInvoices.length - 1) {
