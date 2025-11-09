@@ -524,7 +524,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/welcome', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'demo.html'));
+  res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
 });
 
 // Legacy route redirect
