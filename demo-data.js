@@ -28,6 +28,14 @@ function populateDemoData() {
     }
   });
 
+  db.run('DELETE FROM quotations', (err) => {
+    if (err) {
+      console.error('Error clearing quotations:', err.message);
+    } else {
+      console.log('Cleared existing quotations');
+    }
+  });
+
   // Sample items for bedding and linen shop
   const sampleItems = [
     { name: 'Cotton Bedsheet Set (King Size)', gst: 18, price: 2500 },
@@ -145,15 +153,102 @@ function createSampleInvoices() {
           }
 
           if (index === sampleInvoices.length - 1) {
-            console.log('\n✅ Demo data populated successfully!');
-            console.log(`   - ${sampleInvoices.length + 10} items added`);
-            console.log(`   - ${sampleInvoices.length} sample invoices created`);
-            console.log('\n🚀 You can now start the server and view the demo!');
-            db.close();
+            setTimeout(() => createSampleQuotations(items), 500);
           }
         }
       );
     });
+  });
+}
+
+function createSampleQuotations(items) {
+  // Sample quotations
+  const sampleQuotations = [
+    {
+      customer_name: 'Sunita Reddy',
+      customer_mobile: '+91 9876543213',
+      customer_gst: '33ACDPH9227M1ZG',
+      customer_address: 'Flat 402, Green Valley Apartments, Anna Nagar, Chennai - 600040',
+      items: [
+        { id: items[11].id, name: items[11].name, price: items[11].price, gst: items[11].gst, quantity: 1 },
+        { id: items[9].id, name: items[9].name, price: items[9].price, gst: items[9].gst, quantity: 2 }
+      ],
+      discount: 300
+    },
+    {
+      customer_name: 'Vikram Singh',
+      customer_mobile: '98765-43214',
+      customer_gst: '29ABCDE1234F1Z5',
+      customer_address: 'House No. 12, MG Road, Bangalore - 560001',
+      items: [
+        { id: items[5].id, name: items[5].name, price: items[5].price, gst: items[5].gst, quantity: 2 },
+        { id: items[8].id, name: items[8].name, price: items[8].price, gst: items[8].gst, quantity: 1 }
+      ],
+      discount: 0
+    },
+    {
+      customer_name: 'Meera Krishnan',
+      customer_mobile: '(987) 654-3215',
+      customer_gst: null,
+      customer_address: null,
+      items: [
+        { id: items[0].id, name: items[0].name, price: items[0].price, gst: items[0].gst, quantity: 3 },
+        { id: items[4].id, name: items[4].name, price: items[4].price, gst: items[4].gst, quantity: 1 },
+        { id: items[10].id, name: items[10].name, price: items[10].price, gst: items[10].gst, quantity: 2 }
+      ],
+      discount: 500
+    }
+  ];
+
+  // Calculate totals for each quotation
+  sampleQuotations.forEach((quotation, index) => {
+    let subtotal = 0;
+    let totalGST = 0;
+    let totalInclusive = 0;
+
+    quotation.items.forEach(item => {
+      const inclusiveTotal = item.price * item.quantity;
+      const basePrice = item.price * (100 - item.gst) / 100;
+      const baseTotal = basePrice * item.quantity;
+      const gstAmount = inclusiveTotal - baseTotal;
+      
+      subtotal += baseTotal;
+      totalGST += gstAmount;
+      totalInclusive += inclusiveTotal;
+    });
+
+    const cgst = totalGST / 2;
+    const sgst = totalGST / 2;
+    const total = Math.max(0, totalInclusive - quotation.discount);
+
+    const itemsJson = JSON.stringify(quotation.items);
+
+    // Create quotations with dates spread across recent days
+    const daysAgo = [1, 5, 10][index] || 1;
+    const quotationDate = new Date();
+    quotationDate.setDate(quotationDate.getDate() - daysAgo);
+    const createdAt = quotationDate.toISOString();
+
+    db.run(
+      'INSERT INTO quotations (customer_name, customer_mobile, customer_gst, customer_address, items, subtotal, cgst, sgst, discount, total, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [quotation.customer_name, quotation.customer_mobile, quotation.customer_gst, quotation.customer_address, itemsJson, subtotal, cgst, sgst, quotation.discount, total, createdAt],
+      function(err) {
+        if (err) {
+          console.error(`Error inserting quotation ${index + 1}:`, err.message);
+        } else {
+          console.log(`✓ Created quotation #${this.lastID} for ${quotation.customer_name} (${createdAt.split('T')[0]})`);
+        }
+
+        if (index === sampleQuotations.length - 1) {
+          console.log('\n✅ Demo data populated successfully!');
+          console.log(`   - 12 items added`);
+          console.log(`   - 3 sample invoices created`);
+          console.log(`   - 3 sample quotations created`);
+          console.log('\n🚀 You can now start the server and view the demo!');
+          db.close();
+        }
+      }
+    );
   });
 }
 

@@ -126,7 +126,7 @@ function displayCustomers() {
 
     customerList.innerHTML = customers.map((customer, index) => `
         <div class="customer-item">
-            <input type="checkbox" id="customer-${index}" class="customer-checkbox" onchange="updateSelectedCount()">
+            <input type="checkbox" id="customer-${index}" class="customer-checkbox" data-mobile="${customer.mobile}" data-name="${customer.name.replace(/"/g, '&quot;')}" onchange="updateSelectedCount()">
             <div class="customer-info" onclick="sendWhatsApp('${customer.mobile}', '${customer.name.replace(/'/g, "\\'")}')">
                 <strong>${customer.name}</strong>
                 <small>📱 ${customer.mobile} • Last: ${formatDate(customer.lastPurchase)}</small>
@@ -207,20 +207,20 @@ function sendToSelected() {
         return;
     }
 
-    let sentCount = 0;
-    checkboxes.forEach((checkbox, index) => {
-        const customerIndex = parseInt(checkbox.id.replace('customer-', ''));
-        const customer = customers[customerIndex];
+    const selectedCustomers = Array.from(checkboxes).map(checkbox => ({
+        mobile: checkbox.dataset.mobile,
+        name: checkbox.dataset.name
+    }));
+
+    if (selectedCustomers.length > 0) {
+        alert(`Opening WhatsApp for ${selectedCustomers.length} customer(s). Each will open in a new tab with a 1-second delay.`);
         
-        if (customer) {
+        selectedCustomers.forEach((customer, index) => {
             setTimeout(() => {
                 sendWhatsApp(customer.mobile, customer.name);
             }, index * 1000);
-            sentCount++;
-        }
-    });
-
-    alert(`Opening WhatsApp for ${sentCount} customers. Each will open in a new tab with a 1-second delay.`);
+        });
+    }
 }
 
 function searchCustomers() {

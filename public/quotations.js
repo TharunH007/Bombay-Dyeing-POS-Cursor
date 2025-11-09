@@ -98,7 +98,8 @@ function addItemToQuotation(item) {
             name: item.name,
             price: parseFloat(item.price),
             gst: parseFloat(item.gst),
-            quantity: 1
+            quantity: 1,
+            discountPerUnit: 0
         });
     }
     
@@ -124,14 +125,18 @@ function updateQuotationTable() {
     tbody.innerHTML = '';
 
     if (quotationItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No items in quotation</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No items in quotation</td></tr>';
         return;
     }
 
     quotationItems.forEach((item, index) => {
-        // Price is inclusive of GST, so calculate base price and GST amount
-        const inclusiveTotal = item.price * item.quantity;
-        const basePrice = calculateBasePrice(item.price, item.gst);
+        // Apply per-unit discount to calculate effective unit price
+        const discountPerUnit = parseFloat(item.discountPerUnit) || 0;
+        const effectiveUnitPrice = Math.max(item.price - discountPerUnit, 0);
+        
+        // Calculate totals from effective price
+        const inclusiveTotal = effectiveUnitPrice * item.quantity;
+        const basePrice = calculateBasePrice(effectiveUnitPrice, item.gst);
         const baseTotal = basePrice * item.quantity;
         const gstAmount = inclusiveTotal - baseTotal;
 
@@ -145,15 +150,43 @@ function updateQuotationTable() {
                     <button class="quantity-btn" onclick="increaseQuotationQuantity(${index})">+</button>
                 </div>
             </td>
+            <td>₹${item.price.toFixed(2)}</td>
+            <td>
+                <input type="number" min="0" max="${item.price}" step="1" 
+                       value="${discountPerUnit}" 
+                       onchange="updateQuotationItemDiscount(${index}, this.value)"
+                       onclick="event.stopPropagation()"
+                       style="width: 70px; padding: 4px; border: 1px solid #cbd5e0; border-radius: 4px;">
+            </td>
             <td>₹${baseTotal.toFixed(2)}</td>
             <td>₹${gstAmount.toFixed(2)}</td>
-            <td>₹${inclusiveTotal.toFixed(2)}</td>
+            <td><strong>₹${inclusiveTotal.toFixed(2)}</strong></td>
             <td>
                 <button class="btn btn-danger" onclick="removeItemFromQuotation(${index})">Remove</button>
             </td>
         `;
         tbody.appendChild(row);
     });
+}
+
+// Update item discount
+function updateQuotationItemDiscount(index, value) {
+    const discount = parseFloat(value) || 0;
+    const item = quotationItems[index];
+    
+    // Validate: discount must be >= 0 and < item price
+    if (discount < 0) {
+        quotationItems[index].discountPerUnit = 0;
+        alert('Discount cannot be negative!');
+    } else if (discount >= item.price) {
+        quotationItems[index].discountPerUnit = item.price - 0.01;
+        alert(`Discount cannot be equal to or exceed the item price (₹${item.price.toFixed(2)})`);
+    } else {
+        quotationItems[index].discountPerUnit = discount;
+    }
+    
+    updateQuotationTable();
+    calculateTotal();
 }
 
 // Increase quantity
@@ -179,9 +212,13 @@ function calculateTotal() {
     let totalInclusive = 0;
 
     quotationItems.forEach(item => {
-        // Price is inclusive of GST
-        const inclusiveTotal = item.price * item.quantity;
-        const basePrice = calculateBasePrice(item.price, item.gst);
+        // Apply per-unit discount to calculate effective unit price
+        const discountPerUnit = parseFloat(item.discountPerUnit) || 0;
+        const effectiveUnitPrice = Math.max(item.price - discountPerUnit, 0);
+        
+        // Calculate totals from effective price
+        const inclusiveTotal = effectiveUnitPrice * item.quantity;
+        const basePrice = calculateBasePrice(effectiveUnitPrice, item.gst);
         const baseTotal = basePrice * item.quantity;
         const gstAmount = inclusiveTotal - baseTotal;
         
