@@ -6,6 +6,14 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
+- **2025-11-09**: Dashboard and billing UI improvements
+  - Fixed Sales Analytics dashboard: removed grid lines from charts for cleaner appearance
+  - Fixed 1 month/3 month filter buttons to work correctly
+  - Reordered form fields: Mobile Number now appears first, then Customer Name (billing and quotations)
+  - Added Company GST field in quotations (defaults to NKM's GST: 33ACDPH9227M1ZG)
+  - Updated billing table to show: Item | Qty | MRP | Discount% | Total | Actions (removed Unit Price and per-item GST)
+  - Added monthly sales report download feature with CSV export including sales and GST breakdown
+  - Report includes: total invoices, total sales, CGST, SGST, total GST, discount, and detailed invoice list
 - **2025-11-09**: Implemented MRP-based item pricing with discount system
   - Items now have MRP (Maximum Retail Price), optional Discount %, and auto-calculated Price
   - Item creation UI: MRP field (required), Discount % field (optional), Price field (readonly, auto-calculated)
@@ -150,20 +158,21 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 1. **WhatsApp Messaging**: Free promotional messaging using click-to-chat links (no API costs), multi-customer send with search filters
 2. **Item Management**: MRP-based pricing with optional discount percentage, duplicate item name validation (case-insensitive)
 3. **Billing System**: Create bills with automatic GST calculation (CGST/SGST split), invoice-level discount, customer auto-fill with visual highlighting
-4. **Quotations**: Create quotations and convert them to invoices (quotations preserved), customer auto-fill with GST/address
+4. **Quotations**: Create quotations and convert them to invoices (quotations preserved), customer auto-fill with GST/address, separate company GST field
 5. **Invoice History**: View, search, and download PDF invoices
-6. **Dashboard**: Monthly/yearly sales analytics and top-selling items
+6. **Dashboard**: Monthly/yearly sales analytics with responsive filters, top-selling items, monthly sales report download (CSV)
 7. **PDF Export**: Professional invoice PDFs with company branding
 8. **Local Backup**: Manual backup system saves database to JSON files in `backups/` folder with restore capability
 9. **Duplicate Prevention**: Case-insensitive item name validation, customer mobile number validation across all transactions
 10. **Smart Customer Recognition**: Auto-fill with green highlight for existing customers, read-only name field to prevent data inconsistency
+11. **Sales Reporting**: Downloadable monthly sales report with GST breakdown (total CGST, SGST, total GST, discount)
 
 ### API Endpoints
 - Items: GET/POST/PUT/DELETE `/api/items`
 - Invoices: GET/POST `/api/invoices`, GET `/api/invoices/:id`
 - Quotations: GET/POST/DELETE `/api/quotations`, GET `/api/quotations/:id`, POST `/api/quotations/:id/convert`
 - Customers: GET `/api/customers/search?mobile=XXX` (auto-fetch customer data)
-- Dashboard: GET `/api/dashboard/monthly-total`, `/monthly-sales`, `/yearly-sales`, `/top-items`
+- Dashboard: GET `/api/dashboard/monthly-total`, `/monthly-sales`, `/yearly-sales`, `/top-items`, `/monthly-report` (CSV export)
 
 ## Development
 
