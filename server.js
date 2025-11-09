@@ -844,8 +844,11 @@ app.get('/api/backup/status', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+const HOST = process.env.REPL_ID ? '0.0.0.0' : 'localhost';
+app.listen(PORT, HOST, () => {
+  const url = HOST === 'localhost' ? `http://localhost:${PORT}` : `http://0.0.0.0:${PORT}`;
+  console.log(`Server running on ${url}`);
+  console.log(`Access in browser: http://localhost:${PORT}`);
   console.log('Local backup system ready');
   console.log('Backups will be saved to ./backups/ folder');
 });
