@@ -6,6 +6,19 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 **Current State**: Fully functional POS system with complete CRUD operations for items, invoices, and quotations.
 
 ## Recent Changes
+- **2025-11-09**: Implemented WhatsApp promotional messaging feature
+  - Added welcome page with free WhatsApp click-to-chat messaging
+  - Loads customer list from invoices and quotations
+  - Generates WhatsApp links with pre-filled promotional messages
+  - 100% free solution - no API costs or external services required
+  - Personalizes messages with customer names
+  - Automatically formats mobile numbers for India (+91)
+- **2025-11-09**: Transformed UI to modern light theme
+  - Changed from dark theme to sleek light design
+  - New color scheme: White/light grey backgrounds with purple gradient accents
+  - Improved readability and professional appearance
+  - Enhanced shadows and modern rounded corners
+  - Updated all pages with consistent light theme styling
 - **2025-11-09**: Replaced Firebase backup with local file backup system
   - Removed Firebase dependencies (firebase-admin)
   - Implemented local JSON file backup system in `backups/` folder
@@ -44,6 +57,7 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 ├── pos.db                 # SQLite database (auto-created)
 ├── backups/               # Local backup files (JSON format)
 └── public/                # Frontend static files
+    ├── welcome.html       # Welcome page with WhatsApp messaging
     ├── index.html         # Item management page
     ├── billing.html       # Create invoices/bills
     ├── invoices.html      # View invoice history
@@ -52,7 +66,7 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
     ├── dashboard.html     # Sales analytics dashboard
     ├── demo.html          # Feature showcase
     ├── *.js               # Page-specific JavaScript
-    └── styles.css         # Global styles
+    └── styles.css         # Global styles (modern light theme)
 ```
 
 ### Database Schema
@@ -61,13 +75,14 @@ A complete Point of Sale (POS) web application for Bombay Dyeing bedding and lin
 - **quotations**: Same structure as invoices
 
 ### Key Features
-1. **Item Management**: Add, edit, delete, search items with GST-inclusive pricing
-2. **Billing System**: Create bills with automatic GST calculation (CGST/SGST split)
-3. **Quotations**: Create quotations and convert them to invoices
-4. **Invoice History**: View, search, and download PDF invoices
-5. **Dashboard**: Monthly/yearly sales analytics and top-selling items
-6. **PDF Export**: Professional invoice PDFs with company branding
-7. **Local Backup**: Manual backup system saves database to JSON files in `backups/` folder with restore capability
+1. **WhatsApp Messaging**: Free promotional messaging using click-to-chat links (no API costs)
+2. **Item Management**: Add, edit, delete, search items with GST-inclusive pricing
+3. **Billing System**: Create bills with automatic GST calculation (CGST/SGST split)
+4. **Quotations**: Create quotations and convert them to invoices
+5. **Invoice History**: View, search, and download PDF invoices
+6. **Dashboard**: Monthly/yearly sales analytics and top-selling items
+7. **PDF Export**: Professional invoice PDFs with company branding
+8. **Local Backup**: Manual backup system saves database to JSON files in `backups/` folder with restore capability
 
 ### API Endpoints
 - Items: GET/POST/PUT/DELETE `/api/items`
@@ -92,4 +107,12 @@ npm run demo
 - Database: SQLite file at `./pos.db`
 
 ## User Preferences
-None specified yet.
+- **Local-first architecture**: No cloud hosting dependencies, designed for local business operations
+- **Free solutions preferred**: Implemented WhatsApp click-to-chat instead of paid SMS/messaging APIs
+- **Modern light theme**: Professional appearance with light backgrounds and clean design
+
+## Technical Notes
+- **WhatsApp Integration**: Uses wa.me links instead of Twilio API (user declined paid integration)
+- User dismissed Twilio connector - free click-to-chat solution implemented instead
+- WhatsApp links format: `https://wa.me/{mobile}?text={message}`
+- Mobile numbers automatically formatted with +91 prefix for India
