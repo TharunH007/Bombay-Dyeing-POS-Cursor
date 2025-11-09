@@ -229,7 +229,14 @@ function checkBackupStatus() {
         .then(data => {
             const statusDiv = document.getElementById('backupStatus');
             if (data.configured) {
-                statusDiv.innerHTML = `<span style="color: #27ae60;">✓ Firebase backup configured and ready</span>`;
+                let message = `<span style="color: #27ae60;">✓ Local backup system ready</span>`;
+                if (data.latestBackup) {
+                    const backupDate = new Date(data.latestBackup.timestamp).toLocaleString('en-IN');
+                    message += `<br><small style="color: #b0b0b0;">Last backup: ${backupDate}</small>`;
+                } else {
+                    message += `<br><small style="color: #b0b0b0;">No backups yet. Click "Backup Now" to create one.</small>`;
+                }
+                statusDiv.innerHTML = message;
             } else {
                 statusDiv.innerHTML = `<span style="color: #e74c3c;">⚠ ${data.message}</span>`;
             }
@@ -289,7 +296,7 @@ function showRestoreModal() {
             
             let optionsHtml = data.map(backup => {
                 const date = new Date(backup.timestamp).toLocaleString('en-IN');
-                return `<option value="${backup.id}">${date}</option>`;
+                return `<option value="${backup.filename}">${date}</option>`;
             }).join('');
             
             const modalHtml = `
@@ -333,7 +340,7 @@ function closeRestoreModal() {
 
 // Perform restore
 function performRestore() {
-    const backupId = document.getElementById('backupSelect').value;
+    const filename = document.getElementById('backupSelect').value;
     
     if (!confirm('Are you sure you want to restore this backup? This will replace ALL current data!')) {
         return;
@@ -348,7 +355,7 @@ function performRestore() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ backupId })
+        body: JSON.stringify({ filename })
     })
     .then(r => r.json())
     .then(data => {

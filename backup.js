@@ -1,34 +1,15 @@
-const admin = require('firebase-admin');
 const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const path = require('path');
 
-let firebaseInitialized = false;
 let db;
 
-function initializeFirebase() {
-  if (firebaseInitialized) return true;
+const BACKUP_DIR = path.join(__dirname, 'backups');
 
-  try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
-    
-    if (!serviceAccount) {
-      console.warn('Firebase credentials not found. Backup functionality disabled.');
-      return false;
-    }
-
-    const credentials = JSON.parse(serviceAccount);
-    
-    admin.initializeApp({
-      credential: admin.credential.cert(credentials),
-      databaseURL: credentials.databaseURL || `https://${credentials.project_id}-default-rtdb.firebaseio.com`
-    });
-
-    firebaseInitialized = true;
-    console.log('Firebase initialized successfully');
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize Firebase:', error.message);
-    return false;
+function ensureBackupDir() {
+  if (!fs.existsSync(BACKUP_DIR)) {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    console.log('Created backups directory');
   }
 }
 
@@ -40,13 +21,9 @@ function getDatabase() {
   return db;
 }
 
-async function backupToFirebase() {
-  if (!initializeFirebase()) {
-    throw new Error('Firebase not initialized. Please add FIREBASE_SERVICE_ACCOUNT to secrets.');
-  }
-
+async function backupToLocal() {
+  ensureBackupDir();
   const database = getDatabase();
-  const firebaseDb = admin.database();
   
   try {
     const items = await new Promise((resolve, reject) => {
@@ -79,42 +56,43 @@ async function backupToFirebase() {
       version: '1.0'
     };
 
-    const backupRef = firebaseDb.ref('backups').push();
-    await backupRef.set(backupData);
+    const filename = `backup_${timestamp.replace(/[:.]/g, '-')}.json`;
+    const filepath = path.join(BACKUP_DIR, filename);
+    
+    fs.writeFileSync(filepath, JSON.stringify(backupData, null, 2));
 
-    const latestRef = firebaseDb.ref('latest-backup');
-    await latestRef.set(backupData);
+    fs.writeFileSync(
+      path.join(BACKUP_DIR, 'latest-backup.json'),
+      JSON.stringify(backupData, null, 2)
+    );
+
+    cleanOldBackups();
 
     console.log(`Backup completed successfully at ${timestamp}`);
-    return { success: true, timestamp, backupId: backupRef.key };
+    return { success: true, timestamp, filename };
   } catch (error) {
     console.error('Backup failed:', error);
     throw error;
   }
 }
 
-async function restoreFromFirebase(backupId = null) {
-  if (!initializeFirebase()) {
-    throw new Error('Firebase not initialized. Please add FIREBASE_SERVICE_ACCOUNT to secrets.');
-  }
-
+async function restoreFromLocal(filename = null) {
   const database = getDatabase();
-  const firebaseDb = admin.database();
 
   try {
-    let backupData;
+    let filepath;
     
-    if (backupId) {
-      const snapshot = await firebaseDb.ref(`backups/${backupId}`).once('value');
-      backupData = snapshot.val();
+    if (filename) {
+      filepath = path.join(BACKUP_DIR, filename);
     } else {
-      const snapshot = await firebaseDb.ref('latest-backup').once('value');
-      backupData = snapshot.val();
+      filepath = path.join(BACKUP_DIR, 'latest-backup.json');
     }
 
-    if (!backupData) {
+    if (!fs.existsSync(filepath)) {
       throw new Error('No backup found');
     }
+
+    const backupData = JSON.parse(fs.readFileSync(filepath, 'utf8'));
 
     await new Promise((resolve, reject) => {
       database.run('DELETE FROM items', [], (err) => {
@@ -202,35 +180,83 @@ async function restoreFromFirebase(backupId = null) {
   }
 }
 
-async function listBackups() {
-  if (!initializeFirebase()) {
-    throw new Error('Firebase not initialized. Please add FIREBASE_SERVICE_ACCOUNT to secrets.');
-  }
-
-  const firebaseDb = admin.database();
+function listBackups() {
+  ensureBackupDir();
   
   try {
-    const snapshot = await firebaseDb.ref('backups').orderByChild('timestamp').limitToLast(10).once('value');
-    const backups = [];
-    
-    snapshot.forEach((childSnapshot) => {
-      backups.push({
-        id: childSnapshot.key,
-        timestamp: childSnapshot.val().timestamp,
-        version: childSnapshot.val().version
-      });
-    });
+    const files = fs.readdirSync(BACKUP_DIR)
+      .filter(file => file.startsWith('backup_') && file.endsWith('.json'))
+      .map(file => {
+        const filepath = path.join(BACKUP_DIR, file);
+        const stats = fs.statSync(filepath);
+        const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+        
+        return {
+          filename: file,
+          timestamp: data.timestamp,
+          size: stats.size,
+          created: stats.mtime,
+          version: data.version
+        };
+      })
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 10);
 
-    return backups.reverse();
+    return files;
   } catch (error) {
     console.error('Failed to list backups:', error);
-    throw error;
+    return [];
   }
 }
 
+function cleanOldBackups() {
+  try {
+    const files = fs.readdirSync(BACKUP_DIR)
+      .filter(file => file.startsWith('backup_') && file.endsWith('.json'))
+      .map(file => ({
+        name: file,
+        path: path.join(BACKUP_DIR, file),
+        time: fs.statSync(path.join(BACKUP_DIR, file)).mtime.getTime()
+      }))
+      .sort((a, b) => b.time - a.time);
+
+    if (files.length > 30) {
+      const filesToDelete = files.slice(30);
+      filesToDelete.forEach(file => {
+        fs.unlinkSync(file.path);
+        console.log(`Deleted old backup: ${file.name}`);
+      });
+    }
+  } catch (error) {
+    console.error('Error cleaning old backups:', error);
+  }
+}
+
+function getLatestBackupInfo() {
+  ensureBackupDir();
+  
+  try {
+    const latestPath = path.join(BACKUP_DIR, 'latest-backup.json');
+    if (fs.existsSync(latestPath)) {
+      const data = JSON.parse(fs.readFileSync(latestPath, 'utf8'));
+      return {
+        timestamp: data.timestamp,
+        itemsCount: data.items.length,
+        invoicesCount: data.invoices.length,
+        quotationsCount: data.quotations.length
+      };
+    }
+  } catch (error) {
+    console.error('Error reading latest backup info:', error);
+  }
+  
+  return null;
+}
+
 module.exports = {
-  backupToFirebase,
-  restoreFromFirebase,
+  backupToFirebase: backupToLocal,
+  restoreFromFirebase: restoreFromLocal,
   listBackups,
-  isFirebaseConfigured: () => firebaseInitialized || !!process.env.FIREBASE_SERVICE_ACCOUNT
+  getLatestBackupInfo,
+  isFirebaseConfigured: () => true
 };
