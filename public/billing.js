@@ -5,6 +5,10 @@ let billItems = [];
 document.addEventListener('DOMContentLoaded', () => {
     loadItems();
     calculateTotal();
+    
+    // Add auto-fetch customer name on mobile blur
+    const mobileInput = document.getElementById('customerMobile');
+    mobileInput.addEventListener('blur', autoFetchCustomerName);
 });
 
 // Load all items for selection
@@ -50,6 +54,49 @@ function searchItemsForBilling() {
         item.name.toLowerCase().includes(searchTerm)
     );
     displayItems(filtered);
+}
+
+// Auto-fetch customer name when mobile is entered
+function autoFetchCustomerName() {
+    const mobile = document.getElementById('customerMobile').value.trim();
+    const nameInput = document.getElementById('customerName');
+    const mobileInput = document.getElementById('customerMobile');
+    
+    if (!mobile || mobile.length < 6) {
+        // Reset styling if mobile is cleared or too short
+        mobileInput.style.backgroundColor = '';
+        mobileInput.style.border = '';
+        nameInput.readOnly = false;
+        nameInput.style.backgroundColor = '';
+        nameInput.title = '';
+        return;
+    }
+    
+    fetch(`/api/customers/search?mobile=${encodeURIComponent(mobile)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.found && data.customer_name) {
+                // Highlight that existing customer was found
+                mobileInput.style.backgroundColor = '#d4edda'; // Light green
+                mobileInput.style.border = '2px solid #28a745'; // Green border
+                
+                // Auto-fill and lock customer name
+                nameInput.value = data.customer_name;
+                nameInput.readOnly = true;
+                nameInput.style.backgroundColor = '#f5f5f5';
+                nameInput.title = 'Customer name is locked because this mobile number exists in the system';
+            } else {
+                // Reset styling for new customer
+                mobileInput.style.backgroundColor = '';
+                mobileInput.style.border = '';
+                nameInput.readOnly = false;
+                nameInput.style.backgroundColor = '';
+                nameInput.title = '';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching customer:', error);
+        });
 }
 
 // Add item to bill
@@ -98,7 +145,7 @@ function updateBillTable() {
     }
 
     billItems.forEach((item, index) => {
-        // Price is inclusive of GST, so calculate base price and GST amount
+        // Price is inclusive of GST
         const inclusiveTotal = item.price * item.quantity;
         const basePrice = calculateBasePrice(item.price, item.gst);
         const baseTotal = basePrice * item.quantity;
@@ -114,9 +161,9 @@ function updateBillTable() {
                     <button class="quantity-btn" onclick="increaseQuantity(${index})">+</button>
                 </div>
             </td>
-            <td>₹${baseTotal.toFixed(2)}</td>
+            <td>₹${item.price.toFixed(2)}</td>
             <td>₹${gstAmount.toFixed(2)}</td>
-            <td>₹${inclusiveTotal.toFixed(2)}</td>
+            <td><strong>₹${inclusiveTotal.toFixed(2)}</strong></td>
             <td>
                 <button class="btn btn-danger" onclick="removeItemFromBill(${index})">Remove</button>
             </td>
