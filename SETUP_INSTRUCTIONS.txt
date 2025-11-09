@@ -1,0 +1,114 @@
+╔══════════════════════════════════════════════════════════════╗
+║         Bombay Dyeing POS System - Local Setup              ║
+╚══════════════════════════════════════════════════════════════╝
+
+📦 REQUIREMENTS
+────────────────────────────────────────────────────────────────
+Before running the POS system, you need Node.js installed:
+• Download from: https://nodejs.org/
+• Install version 14 or higher
+• Restart your computer after installation
+
+
+🚀 HOW TO START THE POS SYSTEM
+────────────────────────────────────────────────────────────────
+
+For WINDOWS:
+1. Double-click "START_POS.bat"
+2. A black window (terminal) will appear
+3. Your browser will automatically open to the POS system
+4. That's it! Start using the POS
+
+For MAC/LINUX:
+1. Right-click "START_POS.sh" → Open With → Terminal
+   (First time: You may need to make it executable)
+   (Open Terminal, type: chmod +x START_POS.sh)
+2. Your browser will automatically open to the POS system
+3. That's it! Start using the POS
+
+
+🛑 HOW TO STOP THE SERVER
+────────────────────────────────────────────────────────────────
+• In the black terminal window, press: Ctrl + C
+• Or simply close the terminal window
+
+
+📱 ACCESS FROM MOBILE/TABLET
+────────────────────────────────────────────────────────────────
+To use the POS from your phone or tablet on the same WiFi:
+
+Step 1: Find your computer's IP address
+  Windows: Open Command Prompt → type "ipconfig"
+           Look for "IPv4 Address" (e.g., 192.168.1.100)
+  
+  Mac:     Open Terminal → type "ifconfig | grep inet"
+           Look for an address like 192.168.x.x
+
+Step 2: On your mobile device
+  Open browser and type: http://YOUR_IP_ADDRESS:5000
+  Example: http://192.168.1.100:5000
+  
+  ⚠️ IMPORTANT: Use "http://" NOT "https://"
+
+Step 3: Bookmark it!
+  Save the link on your phone's home screen for quick access
+
+
+📂 PROJECT FILES
+────────────────────────────────────────────────────────────────
+• pos.db           - Your database (all your data is here!)
+• backups/         - Automatic database backups
+• public/          - Website files (HTML, CSS, JavaScript)
+• server.js        - Server program
+• START_POS.bat    - Windows launcher (double-click this)
+• START_POS.sh     - Mac/Linux launcher
+
+
+💾 BACKING UP YOUR DATA
+────────────────────────────────────────────────────────────────
+Your sales data is stored in "pos.db" file.
+
+To backup:
+• Copy the entire project folder to a USB drive or cloud storage
+• Or use the "Download Backup" button in the Dashboard
+
+
+🔄 RESTORING FROM BACKUP
+────────────────────────────────────────────────────────────────
+• Copy your backed-up project folder back to your computer
+• Run the START_POS launcher as usual
+• All your data will be there!
+
+
+⚠️ TROUBLESHOOTING
+────────────────────────────────────────────────────────────────
+
+Problem: Browser doesn't open automatically
+Solution: Manually open browser and go to: http://localhost:5000
+
+Problem: "Node is not recognized" error
+Solution: Install Node.js from https://nodejs.org/ and restart
+
+Problem: Can't access from mobile
+Solution: 
+  • Make sure mobile is on same WiFi as computer
+  • Use "http://" not "https://"
+  • Check Windows Firewall allows Node.js
+  • Get correct IP address from computer
+
+Problem: Port 5000 already in use
+Solution: Close other programs using port 5000, or
+  • Edit server.js
+  • Change "PORT = 5000" to "PORT = 8000"
+  • Use http://localhost:8000 instead
+
+
+📞 SUPPORT
+────────────────────────────────────────────────────────────────
+For technical issues, refer to the replit.md file for system
+documentation and architecture details.
+
+
+═══════════════════════════════════════════════════════════════
+            Ready to use! Double-click START_POS to begin
+═══════════════════════════════════════════════════════════════
