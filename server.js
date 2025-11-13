@@ -44,6 +44,7 @@ function initializeDatabase() {
     discount REAL,
     price REAL NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    stock INTEGER DEFAULT 0
   )`, (err) => {
     if (err) {
       console.error('Error creating items table:', err.message);
@@ -273,7 +274,8 @@ app.get('/api/items', (req, res) => {
 
 // Add item
 app.post('/api/items', (req, res) => {
-  const { name, gst, mrp, discount } = req.body;
+  const { name, gst, mrp, discount, stock } = req.body;
+  const stockValue = stock ? Number(stock) : 0;
 
   if (!name || gst === undefined || mrp === undefined) {
     res.status(400).json({ error: 'Name, GST, and MRP are required' });
@@ -297,8 +299,8 @@ app.post('/api/items', (req, res) => {
     const price = parseFloat(mrp) * (1 - discountPercent / 100);
 
     db.run(
-      'INSERT INTO items (name, gst, mrp, discount, price) VALUES (?, ?, ?, ?, ?)',
-      [name, parseFloat(gst), parseFloat(mrp), discountPercent || null, price],
+      'INSERT INTO items (name, gst, mrp, discount, price, stock) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, parseFloat(gst), parseFloat(mrp), discountPercent || null, price, stockValue],
       function(err) {
         if (err) {
           res.status(500).json({ error: err.message });
@@ -313,7 +315,8 @@ app.post('/api/items', (req, res) => {
 // Update item
 app.put('/api/items/:id', (req, res) => {
   const id = req.params.id;
-  const { name, gst, mrp, discount } = req.body;
+  const { name, gst, mrp, discount, stock } = req.body;
+  const stockValue = stock ? Number(stock) : 0;
 
   if (!name || gst === undefined || mrp === undefined) {
     res.status(400).json({ error: 'Name, GST, and MRP are required' });
@@ -337,8 +340,8 @@ app.put('/api/items/:id', (req, res) => {
     const price = parseFloat(mrp) * (1 - discountPercent / 100);
 
     db.run(
-      'UPDATE items SET name = ?, gst = ?, mrp = ?, discount = ?, price = ? WHERE id = ?',
-      [name, parseFloat(gst), parseFloat(mrp), discountPercent || null, price, id],
+      'UPDATE items SET name = ?, gst = ?, mrp = ?, discount = ?, price = ?, stock = ? WHERE id = ?',
+      [name, parseFloat(gst), parseFloat(mrp), discountPercent || null, price, stockValue, id],
       function(err) {
         if (err) {
           res.status(500).json({ error: err.message });

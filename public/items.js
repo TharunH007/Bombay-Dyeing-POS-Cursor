@@ -46,7 +46,7 @@ function displayItems(items) {
         editBtn.className = 'btn btn-primary';
         editBtn.style.marginRight = '5px';
         editBtn.textContent = 'Edit';
-        editBtn.onclick = () => editItem(item.id, item.name, item.gst, item.mrp, item.discount, item.price);
+        editBtn.onclick = () => editItem(item.id, item.name, item.gst, item.mrp, item.discount, item.price, item.stock);
         
         const removeBtn = document.createElement('button');
         removeBtn.className = 'btn btn-danger';
@@ -95,10 +95,16 @@ function addItem() {
     const gst = parseFloat(document.getElementById('itemGST').value);
     const mrp = parseFloat(document.getElementById('itemMRP').value);
     const discount = parseFloat(document.getElementById('itemDiscount').value) || 0;
+    const stock = document.getElementById('itemStock').value.trim();
 
     if (!name || isNaN(gst) || isNaN(mrp)) {
         alert('Please fill in all required fields correctly.');
         return;
+    }
+
+    const itemData = { name, gst, mrp, discount: discount > 0 ? discount : null };
+    if (stock) {
+        itemData.stock = parseInt(stock);
     }
 
     fetch('/api/items', {
@@ -106,7 +112,7 @@ function addItem() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name, gst, mrp, discount: discount > 0 ? discount : null })
+        body: JSON.stringify(itemData)
     })
     .then(response => response.json())
     .then(data => {
@@ -157,13 +163,14 @@ function searchItems() {
 }
 
 // Edit item - open modal
-function editItem(id, name, gst, mrp, discount, price) {
+function editItem(id, name, gst, mrp, discount, price, stock) {
     document.getElementById('editItemId').value = id;
     document.getElementById('editItemName').value = name;
     document.getElementById('editItemGST').value = gst;
     document.getElementById('editItemMRP').value = mrp || price;
     document.getElementById('editItemDiscount').value = discount || '';
     document.getElementById('editItemPrice').value = price;
+    document.getElementById('editItemStock').value = stock || '';
     document.getElementById('editModal').style.display = 'block';
 }
 
@@ -180,10 +187,16 @@ function updateItem() {
     const gst = parseFloat(document.getElementById('editItemGST').value);
     const mrp = parseFloat(document.getElementById('editItemMRP').value);
     const discount = parseFloat(document.getElementById('editItemDiscount').value) || 0;
+    const stock = document.getElementById('editItemStock').value.trim();
 
     if (!name || isNaN(gst) || isNaN(mrp)) {
         alert('Please fill in all required fields correctly.');
         return;
+    }
+
+    const itemData = { name, gst, mrp, discount: discount > 0 ? discount : null };
+    if (stock) {
+        itemData.stock = parseInt(stock);
     }
 
     fetch(`/api/items/${id}`, {
@@ -191,7 +204,7 @@ function updateItem() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ name, gst, mrp, discount: discount > 0 ? discount : null })
+        body: JSON.stringify(itemData)
     })
     .then(response => response.json())
     .then(data => {
